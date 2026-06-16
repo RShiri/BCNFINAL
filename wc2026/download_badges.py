@@ -93,43 +93,48 @@ for name, iso in WC2026_NATIONS:
 
 # ── Downloader ─────────────────────────────────────────────────────────────
 
-# Primary: GitHub-hosted country flags by hjnilsson (simple 2-letter iso code)
-GITHUB_FLAGS_URL = "https://raw.githubusercontent.com/hjnilsson/country-flags/master/png1000px/{code}.png"
-# Fallback for sub-national flags (Scotland, England) – Wikipedia commons
-WIKI_FLAGS: dict[str, str] = {
-    "gb-sct": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Flag_of_Scotland.svg/1280px-Flag_of_Scotland.svg.png",
-    "gb-eng": "https://upload.wikimedia.org/wikipedia/en/thumb/b/be/Flag_of_England.svg/1280px-Flag_of_England.svg.png",
+# HatScripts circle-flags on GitHub Pages (SVG, accessible from most environments)
+HATSCRIPTS_URL = "https://raw.githubusercontent.com/HatScripts/circle-flags/gh-pages/flags/{code}.svg"
+
+# Manual overrides for non-standard codes in the HatScripts repo
+HATSCRIPTS_OVERRIDES: dict[str, str] = {
+    "gb-sct": "gb-sct",   # Scotland
+    "gb-eng": "gb-eng",   # England
+    "ba":     "ba",
+    "cd":     "cd",       # DR Congo
+    "cv":     "cv",       # Cape Verde
 }
+
+
+def _svg_to_png(svg_bytes: bytes, size: int = 160) -> bytes:
+    """Convert SVG bytes → PNG bytes via cairosvg."""
+    try:
+        import cairosvg
+        return cairosvg.svg2png(bytestring=svg_bytes,
+                                output_width=size, output_height=size)
+    except ImportError:
+        raise RuntimeError("cairosvg not installed – run: pip install cairosvg")
 
 
 def download_flag(name: str, iso: str, out_dir: Path) -> bool:
     dest = out_dir / f"{name}.png"
     if dest.exists():
-        print(f"  [skip] {name} already downloaded")
+        print(f"  [skip] {name} (already downloaded)")
         return True
 
-    # Sub-national flags from Wikipedia
-    if iso.lower() in WIKI_FLAGS:
-        urls = [WIKI_FLAGS[iso.lower()]]
-    else:
-        # GitHub raw – standard 2-letter lower-case ISO code
-        code = iso.lower().replace("-", "")[:2]  # gb-sct → gb (fallback)
-        urls = [GITHUB_FLAGS_URL.format(code=code)]
-
-    for url in urls:
-        try:
-            req = urllib.request.Request(
-                url,
-                headers={"User-Agent": "Mozilla/5.0 WC2026-Badge-Downloader/1.0"},
-            )
-            data = urllib.request.urlopen(req, timeout=15).read()
-            dest.write_bytes(data)
-            print(f"  [ok]   {name} ({iso}) → {dest.name}")
-            return True
-        except Exception as exc:
-            print(f"  [FAIL] {name} ({iso}) from {url}: {exc}")
-
-    return False
+    code = HATSCRIPTS_OVERRIDES.get(iso.lower(), iso.lower())
+    url  = HATSCRIPTS_URL.format(code=code)
+    try:
+        req  = urllib.request.Request(
+            url, headers={"User-Agent": "Mozilla/5.0 WC2026-Badge-Downloader/1.0"})
+        svg  = urllib.request.urlopen(req, timeout=15).read()
+        png  = _svg_to_png(svg)
+        dest.write_bytes(png)
+        print(f"  [ok]   {name} ({iso}) → {dest.name}")
+        return True
+    except Exception as exc:
+        print(f"  [FAIL] {name} ({iso}): {exc}")
+        return False
 
 
 def main() -> None:
