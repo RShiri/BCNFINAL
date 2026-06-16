@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Racing Santander 0–2 Barcelona | BCNAnalytics</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:#0d0d1a;color:#e0e0e0;line-height:1.5}
+a{color:inherit;text-decoration:none}
+
+/* NAV */
+.nav{display:flex;align-items:center;gap:20px;padding:14px 32px;
+  background:#08081a;border-bottom:1px solid #1e1e4a;position:sticky;top:0;z-index:100}
+.nav-logo{font-size:18px;font-weight:900;color:#f5c518;letter-spacing:-0.5px}
+.nav-logo span{color:#004d98}
+.nav a{font-size:13px;color:#9999cc;transition:color .2s}
+.nav a:hover,.nav a.active{color:#fff}
+
+/* CARDS */
+.card{background:#111128;border:1px solid #1e1e4a;border-radius:12px;overflow:hidden;
+  transition:border-color .2s,box-shadow .2s}
+.card:hover{border-color:#4444aa;box-shadow:0 4px 30px #0000aa22}
+.card-header{padding:14px 20px;border-bottom:1px solid #1e1e4a;display:flex;align-items:center;gap:10px}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.card-header h3{font-size:13px;font-weight:600;letter-spacing:.5px;color:#ccccee}
+.card img{width:100%;display:block}
+
+/* RESULT BADGES */
+.badge-W{background:#1a4a1a;color:#4caf50;border:1px solid #2e7d32}
+.badge-D{background:#2a2a1a;color:#ffc107;border:1px solid #f57f17}
+.badge-L{background:#4a1a1a;color:#ef5350;border:1px solid #b71c1c}
+.badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:1px}
+
+/* COMP PILL */
+.pill{display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600;letter-spacing:.5px}
+.pill-liga{background:#1a2a5a;color:#6699ff}
+.pill-ucl{background:#1a3a2a;color:#66cc88}
+.pill-copa{background:#3a1a3a;color:#cc66cc}
+.pill-supercopa{background:#3a2a1a;color:#ffaa44}
+
+/* TWO COL */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:900px){.two-col{grid-template-columns:1fr}}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+@media(max-width:1100px){.three-col{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.three-col{grid-template-columns:1fr}}
+
+/* SECTION */
+.section{padding:36px 28px;border-top:1px solid #1e1e4a}
+.sec-title{font-size:18px;font-weight:700;color:#ccccee;margin-bottom:6px}
+.sec-sub{font-size:12px;color:#8888bb;margin-bottom:22px}
+
+/* STAT BAR ROW */
+.stats-header{display:flex;justify-content:space-between;padding:0 0 14px;border-bottom:1px solid #1e1e4a;margin-bottom:14px}
+.stats-team-name{font-size:13px;font-weight:800;letter-spacing:.5px}
+.sr{display:grid;grid-template-columns:70px 1fr 70px;align-items:center;gap:10px;margin-bottom:11px}
+.sv{font-size:15px;font-weight:800;text-align:center;line-height:1}
+.sv.h{color:#004d98} .sv.a{color:#a50044;text-align:center}
+.sb-wrap{text-align:center}
+.sb{display:flex;height:6px;border-radius:4px;overflow:hidden;background:#1a1a3a;margin-bottom:5px}
+.bh{background:#004d98;transition:width .6s} .ba{background:#a50044;transition:width .6s}
+.sl{font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:#5555aa}
+
+/* TABS */
+.tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.tab{padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;
+  background:#111128;border:1px solid #1e1e4a;color:#9999cc;transition:all .2s}
+.tab.active,.tab:hover{background:#004d98;border-color:#004d98;color:#fff}
+
+/* FOOTER */
+.footer{text-align:center;padding:20px;font-size:11px;color:#333366;border-top:1px solid #1e1e4a}
+
+/* Force embedded Plotly charts to fill width.
+   The pitch itself stays proportional via the figure's yaxis scaleanchor,
+   so width:100% here only changes the surrounding green letterbox, not the
+   pitch shape. */
+.js-plotly-plot,.plot-container,.plotly{width:100%!important}
+.js-plotly-plot .main-svg{width:100%!important}
+
+
+.hdr{background:linear-gradient(135deg,#08081a 0%,#111130 60%,#08081a 100%);
+  border-bottom:1px solid #1e1e4a;padding:28px 32px 20px;text-align:center}
+.match-label{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#6666aa;margin-bottom:12px}
+.scoreline{display:flex;align-items:center;justify-content:center;gap:24px;margin:10px 0}
+.tn{font-size:22px;font-weight:900;min-width:180px}
+.tn.h{color:#888888;text-align:right}
+.tn.a{color:#004d98;text-align:left}
+.sc{font-size:48px;font-weight:900;color:#fff;letter-spacing:-2px;
+  text-shadow:0 0 40px #4caf5044}
+.meta{font-size:11px;color:#555577;margin-top:8px}
+
+.stats-box{max-width:760px;margin:0 auto;padding:28px 28px}
+
+.page-inner{max-width:1400px;margin:0 auto}
+
+.match-nav{display:flex;justify-content:space-between;padding:12px 32px;
+  border-bottom:1px solid #1e1e4a;font-size:13px}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo">BCN<span>Analytics</span></div>
+  <a href="index.html">← Season</a>
+</nav>
+
+<div class="match-nav">
+  <a href="match_1961643.html" style="color:#8888bb">← Prev</a>
+  <span style="font-size:12px;color:#555577">2026-01-15 · Copa del Rey</span>
+  <a href="match_1914077.html" style="color:#8888bb">Next →</a>
+</div>
+
+<div class="hdr">
+  <div class="match-label">Copa del Rey · 2026-01-15</div>
+  <div class="scoreline">
+    <div class="tn h">Racing Santander</div>
+    <div class="sc">0 – 2</div>
+    <div class="tn a">Barcelona</div>
+  </div>
+  <span class="badge badge-W" style="font-size:13px;padding:4px 14px">W</span>
+  <div class="meta" style="margin-top:10px">Unknown  ·  Ref: Unknown</div>
+</div>
+
+<!-- STATS -->
+<div class="stats-box">
+  <div style="text-align:center;margin-bottom:16px">
+    <span style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6666aa">Match Statistics</span>
+  </div>
+  <div class="stats-header">
+    <span class="stats-team-name" style="color:#888888">Racing Santander</span>
+    <span class="stats-team-name" style="color:#004d98">Barcelona</span>
+  </div>
+  <div class="sr">
+        <span class="sv h">0.00</span>
+        <div class="sb-wrap">
+          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
+          <span class="sl">xG (model est.)</span>
+        </div>
+        <span class="sv a">0.00</span>
+      </div><div class="sr">
+        <span class="sv h">0%</span>
+        <div class="sb-wrap">
+          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
+          <span class="sl">Possession</span>
+        </div>
+        <span class="sv a">100%</span>
+      </div><div class="sr">
+        <span class="sv h">0</span>
+        <div class="sb-wrap">
+          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
+          <span class="sl">Shots on Goal</span>
+        </div>
+        <span class="sv a">0</span>
+      </div><div class="sr">
+        <span class="sv h">0</span>
+        <div class="sb-wrap">
+          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
+          <span class="sl">Shots</span>
+        </div>
+        <span class="sv a">0</span>
+      </div><div class="sr">
+        <span class="sv h">0</span>
+        <div class="sb-wrap">
+          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
+          <span class="sl">Big Chances Created</span>
+        </div>
+        <span class="sv a">0</span>
+      </div><div class="sr">
+        <span class="sv h">0</span>
+        <div class="sb-wrap">
+          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
+          <span class="sl">Big Chances Missed</span>
+        </div>
+        <span class="sv a">0</span>
+      </div><div class="sr">
+        <span class="sv h">0%</span>
+        <div class="sb-wrap">
+          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
+          <span class="sl">Passes (Accuracy)</span>
+        </div>
+        <span class="sv a">0%</span>
+      </div><div class="sr">
+        <span class="sv h">0</span>
+        <div class="sb-wrap">
+          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
+          <span class="sl">Duels Won</span>
+        </div>
+        <span class="sv a">0</span>
+      </div><div class="sr">
+        <span class="sv h">0</span>
+        <div class="sb-wrap">
+          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
+          <span class="sl">Saves</span>
+        </div>
+        <span class="sv a">0</span>
+      </div><div class="sr">
+        <span class="sv h">0</span>
+        <div class="sb-wrap">
+          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
+          <span class="sl">Fouls Committed</span>
+        </div>
+        <span class="sv a">0</span>
+      </div>
+</div>
+
+<div class="page-inner">
+
+<!-- SHOT MAPS -->
+<div class="section">
+  <div class="sec-title">🎯 Shot Maps</div>
+  <div class="sec-sub">Dot size = xG · ★ = Goal · Hover for player, minute, xG, zone · Racing Santander attacks → &nbsp;|&nbsp; Barcelona attacks ←</div>
+
+  <div style="margin-bottom:10px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6666aa">
+    WhoScored xG Model
+  </div>
+  <div style="border-radius:12px;overflow:hidden;border:1px solid #1e1e4a;background:#1a1a2e;margin-bottom:28px;width:100%">
+    <p style='color:#666;text-align:center;padding:40px'>Shot map not yet generated.</p>
+  </div>
+
+  <div style="margin-bottom:10px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6666aa">
+    Understat xG Model
+  </div>
+  <div style="border-radius:12px;overflow:hidden;border:1px solid #1e1e4a;background:#1a1a2e;width:100%">
+    <p style='color:#666;text-align:center;padding:40px'>Shot map not yet generated.</p>
+  </div>
+</div>
+
+<!-- PASS NETWORKS -->
+<div class="section">
+  <div class="sec-title">🔗 Passing Networks</div>
+  <div class="sec-sub">Starting XI · Line thickness = pass volume · Pre-first substitution</div>
+  <div class="two-col">
+    <div class="card" style="padding:32px;text-align:center;color:#555577">Racing Santander Pass Network<br><small>No data</small></div>
+    <div class="card" style="padding:32px;text-align:center;color:#555577">Barcelona Pass Network<br><small>No data</small></div>
+  </div>
+</div>
+
+<!-- PASS MAPS -->
+<div class="section">
+  <div class="sec-title">📊 Pass Maps</div>
+  <div class="sec-sub">Green = complete · Red = incomplete</div>
+  <div class="tabs"><button class="tab active" onclick="showPassTab(0,this)">All Passes</button><button class="tab" onclick="showPassTab(1,this)">Final Half Passes</button><button class="tab" onclick="showPassTab(2,this)">Final Third Entries</button><button class="tab" onclick="showPassTab(3,this)">Passes Into the Box</button><button class="tab" onclick="showPassTab(4,this)">Progressive Passes</button></div><div class="pass-tab-content" id="pt0" style="display:block"><div class="two-col"><div class="card" style="padding:32px;text-align:center;color:#555577">Racing Santander — All Passes<br><small>No data</small></div><div class="card" style="padding:32px;text-align:center;color:#555577">Barcelona — All Passes<br><small>No data</small></div></div></div><div class="pass-tab-content" id="pt1" style="display:none"><div class="two-col"><div class="card" style="padding:32px;text-align:center;color:#555577">Racing Santander — Final Half Passes<br><small>No data</small></div><div class="card" style="padding:32px;text-align:center;color:#555577">Barcelona — Final Half Passes<br><small>No data</small></div></div></div><div class="pass-tab-content" id="pt2" style="display:none"><div class="two-col"><div class="card" style="padding:32px;text-align:center;color:#555577">Racing Santander — Final Third Entries<br><small>No data</small></div><div class="card" style="padding:32px;text-align:center;color:#555577">Barcelona — Final Third Entries<br><small>No data</small></div></div></div><div class="pass-tab-content" id="pt3" style="display:none"><div class="two-col"><div class="card" style="padding:32px;text-align:center;color:#555577">Racing Santander — Passes Into the Box<br><small>No data</small></div><div class="card" style="padding:32px;text-align:center;color:#555577">Barcelona — Passes Into the Box<br><small>No data</small></div></div></div><div class="pass-tab-content" id="pt4" style="display:none"><div class="two-col"><div class="card" style="padding:32px;text-align:center;color:#555577">Racing Santander — Progressive Passes<br><small>No data</small></div><div class="card" style="padding:32px;text-align:center;color:#555577">Barcelona — Progressive Passes<br><small>No data</small></div></div></div>
+</div>
+
+<!-- DRIBBLES -->
+<div class="section">
+  <div class="sec-title">⚡ Take-Ons</div>
+  <div class="sec-sub">Filter by player · Green = successful · Red = unsuccessful</div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header"><div class="dot" style="background:#888888"></div><h3>Racing Santander Take-Ons</h3></div>
+      <div style="background:#0d0d1a"><p style='color:#666;text-align:center;padding:40px'>No take-on data.</p></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="dot" style="background:#004d98"></div><h3>Barcelona Take-Ons</h3></div>
+      <div style="background:#0d0d1a"><p style='color:#666;text-align:center;padding:40px'>No take-on data.</p></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /page-inner -->
+
+<div class="footer">BCNProject Analytics · Match 1960828 · WhoScored + Understat</div>
+
+<script>
+function showPassTab(idx, btn) {
+  document.querySelectorAll('.pass-tab-content').forEach((el,i) => el.style.display = i===idx ? 'block' : 'none');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

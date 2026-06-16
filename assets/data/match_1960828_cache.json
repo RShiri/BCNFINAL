@@ -1,0 +1,29 @@
+{
+  "matchId": 1960828,
+  "startDate": "2026-01-15T20:15:00Z",
+  "startTime": "2026-01-15T20:15:00Z",
+  "venueName": "Unknown",
+  "referee": {
+    "name": "Unknown"
+  },
+  "attendance": "",
+  "home": {
+    "teamId": 56,
+    "name": "Racing Santander",
+    "scores": {
+      "fulltime": 0
+    },
+    "stats": {}
+  },
+  "away": {
+    "teamId": 65,
+    "name": "Barcelona",
+    "scores": {
+      "fulltime": 2
+    },
+    "stats": {}
+  },
+  "events": [],
+  "playerIdNameDictionary": {},
+  "_competition": "Copa del Rey"
+}

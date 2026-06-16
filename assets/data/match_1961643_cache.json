@@ -1,0 +1,29 @@
+{
+  "matchId": 1961643,
+  "startDate": "2026-01-11T19:00:00Z",
+  "startTime": "2026-01-11T19:00:00Z",
+  "venueName": "Unknown",
+  "referee": {
+    "name": "Unknown"
+  },
+  "attendance": "",
+  "home": {
+    "teamId": 65,
+    "name": "Barcelona",
+    "scores": {
+      "fulltime": 3
+    },
+    "stats": {}
+  },
+  "away": {
+    "teamId": 52,
+    "name": "Real Madrid",
+    "scores": {
+      "fulltime": 2
+    },
+    "stats": {}
+  },
+  "events": [],
+  "playerIdNameDictionary": {},
+  "_competition": "Supercopa"
+}

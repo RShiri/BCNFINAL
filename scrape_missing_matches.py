@@ -14,7 +14,8 @@ The script:
   5. Regenerates all assets + rebuilds the website automatically
 """
 
-import os, json, re, time, subprocess, urllib.request
+import os, json, re, time, subprocess, urllib.request, sys
+sys.stdout.reconfigure(encoding='utf-8')
 import undetected_chromedriver as uc
 from bs4 import BeautifulSoup
 

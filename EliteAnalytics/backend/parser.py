@@ -70,8 +70,9 @@ def parse_match_data(session: Session, json_path: str):
     current_chain_id = 1
     current_team_possession = None
     
-    home_goals = 0
-    away_goals = 0
+    # Initialize goals from metadata to avoid own-goal calculation bugs
+    home_goals = data.get("home", {}).get("scores", {}).get("fulltime", 0) or 0
+    away_goals = data.get("away", {}).get("scores", {}).get("fulltime", 0) or 0
     
     for i, ev in enumerate(events_raw):
         ev_type = ev.get("type", {}).get("displayName", "Unknown")
@@ -90,9 +91,7 @@ def parse_match_data(session: Session, json_path: str):
         quals = {q.get("type", {}).get("displayName", ""): q for q in ev.get("qualifiers", [])}
         
         is_shot = ev_type in ["MissedShots", "SavedShot", "ShotOnPost", "Goal"]
-        if is_shot and ev_type == "Goal":
-            if team_id == home_team.id: home_goals += 1
-            if team_id == away_team.id: away_goals += 1
+
             
         under_pressure = "UnderPressure" in quals
         is_big_chance = "BigChance" in quals

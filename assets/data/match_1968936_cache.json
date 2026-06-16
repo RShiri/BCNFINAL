@@ -1,0 +1,29 @@
+{
+  "matchId": 1968936,
+  "startDate": "2026-02-12T20:00:00Z",
+  "startTime": "2026-02-12T20:00:00Z",
+  "venueName": "Unknown",
+  "referee": {
+    "name": "Unknown"
+  },
+  "attendance": "",
+  "home": {
+    "teamId": 63,
+    "name": "Atletico Madrid",
+    "scores": {
+      "fulltime": 4
+    },
+    "stats": {}
+  },
+  "away": {
+    "teamId": 65,
+    "name": "Barcelona",
+    "scores": {
+      "fulltime": 0
+    },
+    "stats": {}
+  },
+  "events": [],
+  "playerIdNameDictionary": {},
+  "_competition": "Copa del Rey"
+}
