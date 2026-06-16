@@ -923,7 +923,7 @@ def draw_combined_shotmap(df_home, home_name, df_away, away_name, out_html,
         return mirror ? (100.0 - scaled_y) : scaled_y;
       }});
       var y=ot.map(function(s){{
-        return Math.min(s.gm_z * (40.0 / 38.0), 55.0);
+        return Math.min(s.gm_z * (33.33 / 38.0), 50.0);
       }});
       traces.push({{
         x:x, y:y, type:"scatter", mode:"markers", name:name,
@@ -940,18 +940,21 @@ def draw_combined_shotmap(df_home, home_name, df_away, away_name, out_html,
     var layout={{
       paper_bgcolor:"#0a0a1e", plot_bgcolor:"#11203a",
       font:{{color:"white"}},
-      // Goal is wide & short (≈3:1). View padded around a 0..100 wide, 0..40 tall frame.
+      // Goal is wide & short (3:1). View padded around a 0..100 wide, 0..33.33 tall frame in actual 3:1 aspect ratio.
       xaxis:{{range:[-8,108], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true}},
-      yaxis:{{range:[-6,58], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true}},
+      yaxis:{{
+        range:[-6,48], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true,
+        scaleanchor:"x", scaleratio:1.0
+      }},
       showlegend:true,
       legend:{{orientation:"h", x:0.5, y:-0.08, xanchor:"center", font:{{color:"white",size:11}}, bgcolor:"rgba(0,0,0,0)"}},
       margin:{{l:10,r:10,t:8,b:24}},
       shapes:[
-        {{type:"rect",x0:0,y0:0,x1:100,y1:40,line:{{color:"white",width:4}},fillcolor:"rgba(255,255,255,0.03)"}},
+        {{type:"rect",x0:0,y0:0,x1:100,y1:33.33,line:{{color:"white",width:4}},fillcolor:"rgba(255,255,255,0.03)"}},
         {{type:"line",x0:0,y0:0,x1:100,y1:0,line:{{color:"#bbbbbb",width:2}}}},
-        {{type:"line",x0:33.3,y0:0,x1:33.3,y1:40,line:{{color:"#ffffff22",width:1,dash:"dot"}}}},
-        {{type:"line",x0:66.6,y0:0,x1:66.6,y1:40,line:{{color:"#ffffff22",width:1,dash:"dot"}}}},
-        {{type:"line",x0:0,y0:20,x1:100,y1:20,line:{{color:"#ffffff22",width:1,dash:"dot"}}}}
+        {{type:"line",x0:33.3,y0:0,x1:33.3,y1:33.33,line:{{color:"#ffffff22",width:1,dash:"dot"}}}},
+        {{type:"line",x0:66.6,y0:0,x1:66.6,y1:33.33,line:{{color:"#ffffff22",width:1,dash:"dot"}}}},
+        {{type:"line",x0:0,y0:16.67,x1:100,y1:16.67,line:{{color:"#ffffff22",width:1,dash:"dot"}}}}
       ]
     }};
     Plotly.newPlot("gf_{token}", traces, layout, {{responsive:true, displayModeBar:false}});
