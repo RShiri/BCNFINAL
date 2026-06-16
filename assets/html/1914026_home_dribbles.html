@@ -24,7 +24,7 @@ body{margin:0;background:#0d0d1a;color:#e0e0e0;font-family:system-ui}
 <div id="chart_1914026_home_drib"></div>
 <script>
 (function(){
-  var data = [{"x": 60.599999999999994, "y": 69.12, "player": "Fornals", "outcome": "Unsuccessful", "minute": 36}, {"x": 110.88000000000001, "y": 2.6399999999999864, "player": "Hern\u00e1ndez", "outcome": "Unsuccessful", "minute": 49}, {"x": 35.279999999999994, "y": 71.84, "player": "Garc\u00eda", "outcome": "Unsuccessful", "minute": 75}, {"x": 96.24, "y": 28.159999999999997, "player": "Deossa", "outcome": "Successful", "minute": 82}, {"x": 64.55999999999999, "y": 77.92, "player": "Garc\u00eda", "outcome": "Unsuccessful", "minute": 88}, {"x": 111.36, "y": 19.36, "player": "Ezzalzouli", "outcome": "Unsuccessful", "minute": 88}, {"x": 101.75999999999999, "y": 50.4, "player": "Garc\u00eda", "outcome": "Unsuccessful", "minute": 90}, {"x": 106.08, "y": 62.56, "player": "Garc\u00eda", "outcome": "Unsuccessful", "minute": 92}];
+  var data = [{"x": 60.599999999999994, "y": 10.88, "player": "Fornals", "outcome": "Unsuccessful", "minute": 36}, {"x": 110.88000000000001, "y": 77.36000000000001, "player": "Hern\u00e1ndez", "outcome": "Unsuccessful", "minute": 49}, {"x": 35.279999999999994, "y": 8.16, "player": "Garc\u00eda", "outcome": "Unsuccessful", "minute": 75}, {"x": 96.24, "y": 51.84, "player": "Deossa", "outcome": "Successful", "minute": 82}, {"x": 64.55999999999999, "y": 2.08, "player": "Garc\u00eda", "outcome": "Unsuccessful", "minute": 88}, {"x": 111.36, "y": 60.64, "player": "Ezzalzouli", "outcome": "Unsuccessful", "minute": 88}, {"x": 101.75999999999999, "y": 29.6, "player": "Garc\u00eda", "outcome": "Unsuccessful", "minute": 90}, {"x": 106.08, "y": 17.44, "player": "Garc\u00eda", "outcome": "Unsuccessful", "minute": 92}];
   var shapes = [{"type": "rect", "x0": 0, "y0": 0, "x1": 120, "y1": 80, "line": {"color": "white", "width": 2}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "line", "x0": 60, "y0": 0, "x1": 60, "y1": 80, "line": {"color": "white", "width": 1.5}}, {"type": "circle", "x0": 51, "y0": 31, "x1": 69, "y1": 49, "line": {"color": "white", "width": 1.5}}, {"type": "rect", "x0": 0, "y0": 18, "x1": 18, "y1": 62, "line": {"color": "white", "width": 1.5}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 0, "y0": 30, "x1": 6, "y1": 50, "line": {"color": "white", "width": 1}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 102, "y0": 18, "x1": 120, "y1": 62, "line": {"color": "white", "width": 1.5}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 114, "y0": 30, "x1": 120, "y1": 50, "line": {"color": "white", "width": 1}, "fillcolor": "rgba(0,0,0,0)"}];
 
   window.redraw_1914026_home_drib = function() {
@@ -60,7 +60,7 @@ body{margin:0;background:#0d0d1a;color:#e0e0e0;font-family:system-ui}
       font:{color:"white"},
       shapes: shapes,
       xaxis:{range:[-2,122], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
-      yaxis:{range:[-2,82], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
+      yaxis:{range:[82,-2], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
       showlegend:true,
       legend:{x:0.5, y:-0.04, xanchor:"center", orientation:"h", font:{color:"white",size:12}, bgcolor:"rgba(0,0,0,0)"},
       margin:{l:10,r:10,t:14,b:10},

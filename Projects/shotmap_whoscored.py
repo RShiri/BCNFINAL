@@ -205,7 +205,7 @@ def build_shot_df(match_data, team_name):
             continue
 
         x_sb = _ws_to_sb_x(ev.get("x", 0))
-        y_sb = 80 - ev.get("y", 0) * SCALE_Y  # flip Y
+        y_sb = ev.get("y", 0) * SCALE_Y
         body, situation, zone, big_chance, one_on_one, gm_y, gm_z = _extract_qualifiers(ev)
 
         # Period
@@ -742,11 +742,11 @@ def draw_combined_shotmap(df_home, home_name, df_away, away_name, out_html,
 
     # ── Divider label annotations (placed INSIDE pitch near top to avoid title) ──
     annotations = [
-        dict(x=30, y=76, text=f"← {away_name} Shots",
+        dict(x=30, y=4, text=f"← {away_name} Shots",
              showarrow=False, font=dict(color="#ffffff", size=13, family="Inter"),
              xanchor="center", yanchor="middle",
              bgcolor=AWAY_COLOR, opacity=0.9, borderpad=4),
-        dict(x=90, y=76, text=f"{home_name} Shots →",
+        dict(x=90, y=4, text=f"{home_name} Shots →",
              showarrow=False, font=dict(color="#ffffff", size=13, family="Inter"),
              xanchor="center", yanchor="middle",
              bgcolor=HOME_COLOR, opacity=0.9, borderpad=4),
@@ -802,7 +802,10 @@ def draw_combined_shotmap(df_home, home_name, df_away, away_name, out_html,
                 f"{away_name}: {n_away} shots · xG {xg_away:.2f}  "
                 f"| {home_name}: {n_home} shots · xG {xg_home:.2f}</span>"
             ),
-            x=0.5, font=dict(size=18, color="white"),
+            x=0.5,
+            y=0.97,
+            yanchor="top",
+            font=dict(size=18, color="white"),
         ),
         plot_bgcolor="#2d572c",
         paper_bgcolor="#1a1a2e",
@@ -815,7 +818,7 @@ def draw_combined_shotmap(df_home, home_name, df_away, away_name, out_html,
         # pitch its true 120:80 proportions at any container width.
         xaxis=dict(range=[-4, 124], showgrid=False, zeroline=False,
                    showticklabels=False, fixedrange=True),
-        yaxis=dict(range=[-4, 84], showgrid=False, zeroline=False,
+        yaxis=dict(range=[84, -4], showgrid=False, zeroline=False,
                    showticklabels=False, fixedrange=True),
         showlegend=True,
         legend=dict(
@@ -826,7 +829,7 @@ def draw_combined_shotmap(df_home, home_name, df_away, away_name, out_html,
             font=dict(color="white", size=12),
         ),
         autosize=True, height=720,
-        margin=dict(l=20, r=20, t=130, b=60),
+        margin=dict(l=20, r=20, t=160, b=60),
     )
 
     # Legend traces (always visible)
@@ -915,8 +918,13 @@ def draw_combined_shotmap(df_home, home_name, df_away, away_name, out_html,
       var ot=shots.filter(function(s){{return s.outcome!=="Off Target" && s.gm_y!==null && s.gm_z!==null;}});
       if(!ot.length) return;
       // gm_y 0..100 = left..right post ; gm_z 0..100 with ~38 = crossbar height
-      var x=ot.map(function(s){{return mirror?(100-s.gm_y):s.gm_y;}});
-      var y=ot.map(function(s){{return Math.min(s.gm_z,55);}});
+      var x=ot.map(function(s){{
+        var scaled_y = (s.gm_y - 45.0) * 10.0;
+        return mirror ? (100.0 - scaled_y) : scaled_y;
+      }});
+      var y=ot.map(function(s){{
+        return Math.min(s.gm_z * (40.0 / 38.0), 55.0);
+      }});
       traces.push({{
         x:x, y:y, type:"scatter", mode:"markers", name:name,
         marker:{{

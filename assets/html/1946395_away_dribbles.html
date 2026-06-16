@@ -24,7 +24,7 @@ body{margin:0;background:#0d0d1a;color:#e0e0e0;font-family:system-ui}
 <div id="chart_1946395_away_drib"></div>
 <script>
 (function(){
-  var data = [{"x": 89.16, "y": 46.8, "player": "Podence", "outcome": "Successful", "minute": 0}, {"x": 71.52, "y": 12.0, "player": "Ortega", "outcome": "Successful", "minute": 12}, {"x": 34.8, "y": 68.56, "player": "Podence", "outcome": "Successful", "minute": 43}, {"x": 64.8, "y": 7.359999999999999, "player": "Ortega", "outcome": "Successful", "minute": 44}, {"x": 94.08, "y": 72.0, "player": "Podence", "outcome": "Successful", "minute": 48}, {"x": 44.4, "y": 53.03999999999999, "player": "Retsos", "outcome": "Successful", "minute": 61}, {"x": 78.36, "y": 66.24, "player": "Podence", "outcome": "Successful", "minute": 61}, {"x": 64.55999999999999, "y": 22.879999999999995, "player": "Nascimento", "outcome": "Unsuccessful", "minute": 69}];
+  var data = [{"x": 89.16, "y": 33.2, "player": "Podence", "outcome": "Successful", "minute": 0}, {"x": 71.52, "y": 68.0, "player": "Ortega", "outcome": "Successful", "minute": 12}, {"x": 34.8, "y": 11.440000000000001, "player": "Podence", "outcome": "Successful", "minute": 43}, {"x": 64.8, "y": 72.64, "player": "Ortega", "outcome": "Successful", "minute": 44}, {"x": 94.08, "y": 8.0, "player": "Podence", "outcome": "Successful", "minute": 48}, {"x": 44.4, "y": 26.960000000000004, "player": "Retsos", "outcome": "Successful", "minute": 61}, {"x": 78.36, "y": 13.76, "player": "Podence", "outcome": "Successful", "minute": 61}, {"x": 64.55999999999999, "y": 57.120000000000005, "player": "Nascimento", "outcome": "Unsuccessful", "minute": 69}];
   var shapes = [{"type": "rect", "x0": 0, "y0": 0, "x1": 120, "y1": 80, "line": {"color": "white", "width": 2}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "line", "x0": 60, "y0": 0, "x1": 60, "y1": 80, "line": {"color": "white", "width": 1.5}}, {"type": "circle", "x0": 51, "y0": 31, "x1": 69, "y1": 49, "line": {"color": "white", "width": 1.5}}, {"type": "rect", "x0": 0, "y0": 18, "x1": 18, "y1": 62, "line": {"color": "white", "width": 1.5}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 0, "y0": 30, "x1": 6, "y1": 50, "line": {"color": "white", "width": 1}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 102, "y0": 18, "x1": 120, "y1": 62, "line": {"color": "white", "width": 1.5}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 114, "y0": 30, "x1": 120, "y1": 50, "line": {"color": "white", "width": 1}, "fillcolor": "rgba(0,0,0,0)"}];
 
   window.redraw_1946395_away_drib = function() {
@@ -60,7 +60,7 @@ body{margin:0;background:#0d0d1a;color:#e0e0e0;font-family:system-ui}
       font:{color:"white"},
       shapes: shapes,
       xaxis:{range:[-2,122], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
-      yaxis:{range:[-2,82], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
+      yaxis:{range:[82,-2], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
       showlegend:true,
       legend:{x:0.5, y:-0.04, xanchor:"center", orientation:"h", font:{color:"white",size:12}, bgcolor:"rgba(0,0,0,0)"},
       margin:{l:10,r:10,t:14,b:10},

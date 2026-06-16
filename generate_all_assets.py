@@ -66,9 +66,9 @@ def generate_passmaps(match_id, match_data, team_side, team_name, color_val):
 
         is_prog = is_final_third = is_final_half = is_into_box = False
         x = ev.get("x", 0) * SCALE_X
-        y = 80 - ev.get("y", 0) * SCALE_Y
+        y = ev.get("y", 0) * SCALE_Y
         end_x = float(end_x_raw) * SCALE_X
-        end_y = 80 - float(end_y_raw) * SCALE_Y
+        end_y = float(end_y_raw) * SCALE_Y
 
         # Progressive: significant forward gain depending on starting zone
         if x >= 48:
@@ -160,7 +160,7 @@ def generate_passnetwork(match_id, match_data, team_side, team_name, color_val):
             "type": ev.get("type", {}).get("displayName", ""),
             "player_id": pid,
             "x": ev.get("x", 0) * SCALE_X,
-            "y": 80 - ev.get("y", 0) * SCALE_Y,
+            "y": ev.get("y", 0) * SCALE_Y,
             "minute": ev.get("minute", 0),
             "second": ev.get("second", 0),
             "outcome": ev.get("outcomeType", {}).get("displayName", ""),
@@ -337,7 +337,7 @@ def generate_dribblemap(match_id, match_data, team_side, team_name):
         if ev.get("teamId") != tid: continue
         outcome = ev.get("outcomeType", {}).get("displayName", "")
         x = ev.get("x", 0) * SCALE_X
-        y = 80 - ev.get("y", 0) * SCALE_Y
+        y = ev.get("y", 0) * SCALE_Y
         rows.append({
             "x": x, "y": y,
             "outcome": "Successful" if outcome == "Successful" else "Unsuccessful",
@@ -452,7 +452,7 @@ body{{margin:0;background:#0d0d1a;color:#e0e0e0;font-family:system-ui}}
       font:{{color:"white"}},
       shapes: shapes,
       xaxis:{{range:[-2,122], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true}},
-      yaxis:{{range:[-2,82], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true}},
+      yaxis:{{range:[82,-2], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true}},
       showlegend:true,
       legend:{{x:0.5, y:-0.04, xanchor:"center", orientation:"h", font:{{color:"white",size:12}}, bgcolor:"rgba(0,0,0,0)"}},
       margin:{{l:10,r:10,t:14,b:10}},
