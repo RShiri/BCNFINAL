@@ -205,7 +205,7 @@ def build_shot_df(match_data, team_name):
             continue
 
         x_sb = _ws_to_sb_x(ev.get("x", 0))
-        y_sb = ev.get("y", 0) * SCALE_Y
+        y_sb = 80 - ev.get("y", 0) * SCALE_Y  # flip Y
         body, situation, zone, big_chance, one_on_one, gm_y, gm_z = _extract_qualifiers(ev)
 
         # Period
