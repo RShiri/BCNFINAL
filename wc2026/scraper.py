@@ -85,44 +85,92 @@ def _fotmob_scraper():
 
 
 def fotmob_fetch_wc_matches() -> list[dict]:
-    """Return all matches from the WC 2026 FotMob competition page."""
+    """
+    Return finished WC 2026 matches by scanning today's and yesterday's XML feed.
+    FotMob's JSON leagues endpoint is defunct; the XML matches feed still works at
+    https://api.fotmob.com/matches?date=YYYYMMDD
+    """
+    import xml.etree.ElementTree as ET
+    from datetime import datetime, timezone, timedelta
+
     scraper = _fotmob_scraper()
-    url = f"https://www.fotmob.com/api/leagues?id={WC2026_FOTMOB_ID}&ccode3=INT"
-    log.info("FotMob: fetching WC2026 league (id=%d) …", WC2026_FOTMOB_ID)
-    try:
-        resp = scraper.get(url, timeout=20)
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception as exc:
-        log.error("FotMob league fetch failed: %s", exc)
-        return []
+    now_utc = datetime.now(timezone.utc)
+    dates_to_check = [
+        (now_utc - timedelta(days=1)).strftime("%Y%m%d"),
+        now_utc.strftime("%Y%m%d"),
+    ]
 
-    matches = []
+    matches: list[dict] = []
+    seen_ids: set = set()
 
-    def _walk(obj):
-        if isinstance(obj, dict):
-            # FotMob match objects have 'home', 'away', 'status' and 'id'
-            if "home" in obj and "away" in obj and "status" in obj and "id" in obj:
-                matches.append(obj)
-            for v in obj.values():
-                _walk(v)
-        elif isinstance(obj, list):
-            for item in obj:
-                _walk(item)
+    for date_str in dates_to_check:
+        url = f"https://api.fotmob.com/matches?date={date_str}"
+        log.info("FotMob XML: fetching matches for %s …", date_str)
+        try:
+            resp = scraper.get(url, timeout=20)
+            resp.raise_for_status()
+            root = ET.fromstring(resp.text)
+        except Exception as exc:
+            log.error("FotMob XML fetch failed (%s): %s", date_str, exc)
+            continue
 
-    _walk(data)
-    log.info("FotMob: found %d matches total", len(matches))
+        for league in root.iter("league"):
+            league_name = league.get("name", "")
+            pl = league.get("pl", "")
+            # Filter to WC 2026 (pl=77)
+            if pl != str(WC2026_FOTMOB_ID):
+                continue
+            for match in league.iter("match"):
+                mid = match.get("id")
+                if not mid or mid in seen_ids:
+                    continue
+                seen_ids.add(mid)
+                status_code = match.get("Status", "N")
+                h_score = match.get("hScore", "0")
+                a_score = match.get("aScore", "0")
+                time_str = match.get("time", "")
+                # Parse match UTC time from FotMob XML format "DD.MM.YYYY HH:MM"
+                utc_time = None
+                try:
+                    utc_time = datetime.strptime(time_str, "%d.%m.%Y %H:%M").replace(
+                        tzinfo=timezone.utc
+                    )
+                except Exception:
+                    pass
+                # Consider finished if: status is 'FT'/'AET'/'PEN', OR
+                # score differs from 0-0, OR kick-off was >115 min ago
+                is_finished = (
+                    status_code in ("FT", "AET", "PEN", "FT_PEN")
+                    or (h_score != "0" or a_score != "0")
+                    or (utc_time is not None and (now_utc - utc_time).total_seconds() > 115 * 60)
+                )
+                matches.append({
+                    "id":       int(mid),
+                    "home":     {"name": match.get("hTeam", ""), "id": match.get("hId")},
+                    "away":     {"name": match.get("aTeam", ""), "id": match.get("aId")},
+                    "status":   {
+                        "scoreStr": f"{h_score} - {a_score}",
+                        "finished": is_finished,
+                        "utcTime":  utc_time.isoformat() if utc_time else "",
+                    },
+                    "_league":  league_name,
+                })
+
+    log.info("FotMob XML: found %d WC2026 matches across checked dates", len(matches))
     return matches
 
 
 def fotmob_fetch_match_details(match_id: int) -> dict:
-    """Fetch full FotMob match details (stats, shots, lineup, xG)."""
-    scraper = _fotmob_scraper()
-    url = f"https://www.fotmob.com/api/matchDetails?matchId={match_id}"
-    log.info("FotMob: fetching match %d …", match_id)
-    resp = scraper.get(url, timeout=20)
-    resp.raise_for_status()
-    return resp.json()
+    """
+    FotMob's JSON matchDetails endpoint is defunct (returns 404).
+    Returns a minimal stub so build_match_json() can still proceed using
+    WhoScored as the primary data source.
+    """
+    log.warning(
+        "FotMob matchDetails JSON API is unavailable (404). "
+        "Match %d will be built from WhoScored data only.", match_id
+    )
+    return {"_fotmob_unavailable": True, "general": {}, "header": {}, "content": {}}
 
 
 def _parse_fotmob_stats(fm_data: dict) -> dict:
@@ -422,23 +470,39 @@ def whoscored_search_match_id(home_name: str, away_name: str) -> int | None:
 # BUILD WC2026 MATCH JSON
 # ══════════════════════════════════════════════════════════════════════════
 
-def build_match_json(fm_data: dict, ws_data: dict | None) -> dict:
+def build_match_json(fm_data: dict, ws_data: dict | None,
+                     xml_match: dict | None = None) -> dict:
     """
     Merge FotMob details + optional WhoScored event stream into the
     wc2026 match schema expected by renderer.py.
+
+    When FotMob JSON details are unavailable (fm_data has _fotmob_unavailable=True),
+    names/scores are taken from xml_match (the dict parsed from the XML feed)
+    and ws_data is the mandatory event source.
     """
-    general   = fm_data.get("general", {})
-    header    = fm_data.get("header", {})
-    teams     = header.get("teams", [{}, {}])
-    home_info = teams[0] if len(teams) > 0 else {}
-    away_info = teams[1] if len(teams) > 1 else {}
+    fotmob_unavailable = fm_data.get("_fotmob_unavailable", False)
 
-    home_id   = home_info.get("id")
-    away_id   = away_info.get("id")
-    home_name = home_info.get("name", "Home")
-    away_name = away_info.get("name", "Away")
+    # ── Team names & IDs ─────────────────────────────────────────────────────
+    if fotmob_unavailable and xml_match:
+        home_name = xml_match.get("home", {}).get("name", "Home")
+        away_name = xml_match.get("away", {}).get("name", "Away")
+        home_id   = xml_match.get("home", {}).get("id")
+        away_id   = xml_match.get("away", {}).get("id")
+        score_str = xml_match.get("status", {}).get("scoreStr", "0 - 0")
+        utc_time  = xml_match.get("status", {}).get("utcTime", "")
+    else:
+        general   = fm_data.get("general", {})
+        header    = fm_data.get("header", {})
+        teams     = header.get("teams", [{}, {}])
+        home_info = teams[0] if len(teams) > 0 else {}
+        away_info = teams[1] if len(teams) > 1 else {}
+        home_id   = home_info.get("id")
+        away_id   = away_info.get("id")
+        home_name = home_info.get("name", "Home")
+        away_name = away_info.get("name", "Away")
+        score_str = header.get("status", {}).get("scoreStr", "0 - 0")
+        utc_time  = header.get("status", {}).get("utcTime", "")
 
-    score_str = header.get("status", {}).get("scoreStr", "0 - 0")
     try:
         parts      = re.split(r"\s*-\s*", score_str)
         home_score = int(parts[0].strip())
@@ -446,32 +510,53 @@ def build_match_json(fm_data: dict, ws_data: dict | None) -> dict:
     except Exception:
         home_score = away_score = 0
 
-    utc_time = header.get("status", {}).get("utcTime", "")
     try:
         dt = datetime.fromisoformat(utc_time.replace("Z", "+00:00"))
         date_str = dt.strftime("%Y-%m-%d")
     except Exception:
         date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    venue_info = _parse_fotmob_venue(fm_data)
+    venue_info = _parse_fotmob_venue(fm_data) if not fotmob_unavailable else {
+        "venue": "", "city": "", "country": "United States", "stage": "Group Stage"
+    }
 
-    # Events: prefer WhoScored (rich), fall back to FotMob shots only
+    # ── Events & players ─────────────────────────────────────────────────────
     if ws_data and ws_data.get("events"):
-        events   = ws_data["events"]
-        ws_home  = ws_data.get("home", {})
-        ws_away  = ws_data.get("away", {})
-        home_tid = ws_home.get("teamId", home_id)
-        away_tid = ws_away.get("teamId", away_id)
+        ws_home      = ws_data.get("home", {})
+        ws_away      = ws_data.get("away", {})
+        events       = ws_data["events"]
+        home_tid     = ws_home.get("teamId", home_id)
+        away_tid     = ws_away.get("teamId", away_id)
         home_players = ws_home.get("players", [])
         away_players = ws_away.get("players", [])
+        # WhoScored has the real fulltime scores — use them
+        ws_home_score = ws_home.get("scores", {}).get("fulltime")
+        ws_away_score = ws_away.get("scores", {}).get("fulltime")
+        if ws_home_score is not None:
+            home_score = int(ws_home_score)
+        if ws_away_score is not None:
+            away_score = int(ws_away_score)
+        # Patch names into WhoScored data if FotMob was unavailable
+        if fotmob_unavailable:
+            ws_home["name"] = home_name
+            ws_away["name"] = away_name
+        ws_home["scores"] = {"fulltime": home_score}
+        ws_away["scores"] = {"fulltime": away_score}
         log.info("Using WhoScored events (%d)", len(events))
-    else:
+    elif not fotmob_unavailable:
         events       = _parse_fotmob_shots(fm_data, home_id, away_id)
         home_tid     = home_id
         away_tid     = away_id
         home_players = _parse_fotmob_lineup(fm_data, "home")
         away_players = _parse_fotmob_lineup(fm_data, "away")
         log.info("Using FotMob shot events only (%d)", len(events))
+    else:
+        log.error("No event data available (FotMob unavailable + no WhoScored data).")
+        events       = []
+        home_tid     = home_id
+        away_tid     = away_id
+        home_players = []
+        away_players = []
 
     match_stats = _parse_fotmob_stats(fm_data)
 
@@ -545,21 +630,23 @@ def _output_path(match_json: dict) -> Path:
     return MATCHES_DIR / f"{date}_{home}_vs_{away}.json"
 
 
-def fetch_and_save(fotmob_id: int, fotmob_only: bool = False) -> Path | None:
+def fetch_and_save(fotmob_id: int, fotmob_only: bool = False,
+                   xml_match: dict | None = None) -> Path | None:
     """Full pipeline for one match: fetch → build JSON → save."""
     if fotmob_id in _fetched_ids:
         log.info("Match %d already fetched this session, skipping.", fotmob_id)
         return None
 
-    try:
-        fm_data   = fotmob_fetch_match_details(fotmob_id)
-    except Exception as exc:
-        log.error("Cannot fetch FotMob match %d: %s", fotmob_id, exc)
-        return None
+    fm_data = fotmob_fetch_match_details(fotmob_id)  # now returns stub if API is down
 
-    teams     = fm_data.get("header", {}).get("teams", [{}, {}])
-    home_name = teams[0].get("name", "Home") if teams else "Home"
-    away_name = teams[1].get("name", "Away") if len(teams) > 1 else "Away"
+    # Resolve team names: prefer FotMob JSON, fall back to XML match data
+    if fm_data.get("_fotmob_unavailable") and xml_match:
+        home_name = xml_match.get("home", {}).get("name", "Home")
+        away_name = xml_match.get("away", {}).get("name", "Away")
+    else:
+        teams     = fm_data.get("header", {}).get("teams", [{}, {}])
+        home_name = teams[0].get("name", "Home") if teams else "Home"
+        away_name = teams[1].get("name", "Away") if len(teams) > 1 else "Away"
 
     ws_data = None
     if not fotmob_only:
@@ -568,7 +655,7 @@ def fetch_and_save(fotmob_id: int, fotmob_only: bool = False) -> Path | None:
             ws_url  = _build_whoscored_url(home_name, away_name, ws_mid)
             ws_data = whoscored_fetch_match(ws_url)
 
-    match_json = build_match_json(fm_data, ws_data)
+    match_json = build_match_json(fm_data, ws_data, xml_match=xml_match)
     out_path   = _output_path(match_json)
 
     with open(out_path, "w", encoding="utf-8") as fh:
@@ -613,7 +700,7 @@ def watch_loop(fotmob_only: bool = False) -> None:
                         _fetched_ids.add(mid)
                         continue
                     log.info("New finished match: %s vs %s (id=%d)", home_name, away_name, mid)
-                    fetch_and_save(mid, fotmob_only=fotmob_only)
+                    fetch_and_save(mid, fotmob_only=fotmob_only, xml_match=m)
 
         except Exception as exc:
             log.error("Watch loop error: %s", exc)
@@ -634,7 +721,14 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.fotmob_id:
-        path = fetch_and_save(args.fotmob_id, fotmob_only=args.fotmob_only)
+        # Try to find the xml_match stub from today/yesterday's feed
+        xml_stub = None
+        try:
+            all_matches = fotmob_fetch_wc_matches()
+            xml_stub = next((m for m in all_matches if m.get("id") == args.fotmob_id), None)
+        except Exception:
+            pass
+        path = fetch_and_save(args.fotmob_id, fotmob_only=args.fotmob_only, xml_match=xml_stub)
         sys.exit(0 if path else 1)
     else:
         watch_loop(fotmob_only=args.fotmob_only)

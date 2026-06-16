@@ -12,4 +12,15 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-```
+# Secrets - NEVER commit these
+.env
+*/.env
+*.env
+!.env.template
+!.env.example
+!*.env.template
+!*.env.example
+
+# Logs
+*.log
+wc2026/*.log
