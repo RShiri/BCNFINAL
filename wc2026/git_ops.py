@@ -14,11 +14,9 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-XWCTWIT_REPO = os.environ.get(
-    "XWORLDCUPTWIT_REPO",
-    "https://github.com/RShiri/XWORLDCUPTWIT.git",
-)
+XWCTWIT_REPO   = os.environ.get("XWORLDCUPTWIT_REPO",   "https://github.com/RShiri/XWORLDCUPTWIT.git")
 XWCTWIT_BRANCH = os.environ.get("XWORLDCUPTWIT_BRANCH", "main")
+XWCTWIT_SUBDIR = os.environ.get("XWORLDCUPTWIT_SUBDIR", "WorldCup2026")  # PNG subfolder in the repo
 
 
 def _authed_url(repo_url: str) -> str:
@@ -56,13 +54,16 @@ def push_png_to_xworldcuptwit(png_path: str, commit_message: str | None = None) 
         _run(["git", "clone", "--depth=1", "--branch", XWCTWIT_BRANCH,
                repo_url, tmpdir])
 
-        dest = os.path.join(tmpdir, filename)
+        # Place PNG inside WorldCup2026/ subfolder
+        subdir_path = os.path.join(tmpdir, XWCTWIT_SUBDIR)
+        os.makedirs(subdir_path, exist_ok=True)
+        dest = os.path.join(subdir_path, filename)
         shutil.copy2(png_path, dest)
-        log.info("Copied %s → repo/%s", filename, filename)
+        log.info("Copied %s → repo/%s/%s", filename, XWCTWIT_SUBDIR, filename)
 
         _run(["git", "config", "user.email", "wc2026bot@github.com"], cwd=tmpdir)
         _run(["git", "config", "user.name",  "WC2026 Analytics Bot"],  cwd=tmpdir)
-        _run(["git", "add", filename], cwd=tmpdir)
+        _run(["git", "add", os.path.join(XWCTWIT_SUBDIR, filename)], cwd=tmpdir)
 
         result = _run(["git", "commit", "-m", msg], cwd=tmpdir, check=False)
         if result.returncode != 0 and "nothing to commit" in result.stdout:
@@ -78,11 +79,11 @@ def push_png_to_xworldcuptwit(png_path: str, commit_message: str | None = None) 
 
 
 def _raw_url(filename: str) -> str:
-    """Construct the raw GitHub URL for a file in XWORLDCUPTWIT."""
+    """Construct the raw GitHub URL for a file in XWORLDCUPTWIT/WorldCup2026/."""
     base = (
         XWCTWIT_REPO
         .rstrip("/")
         .replace("github.com", "raw.githubusercontent.com")
         .removesuffix(".git")
     )
-    return f"{base}/{XWCTWIT_BRANCH}/{filename}"
+    return f"{base}/{XWCTWIT_BRANCH}/{XWCTWIT_SUBDIR}/{filename}"
