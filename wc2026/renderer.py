@@ -1,0 +1,810 @@
+"""
+FIFA World Cup 2026 – Match Analytics Dashboard Renderer
+Mirrors the rendering architecture of BCNPROJECT webup (generate_all_assets.py,
+shotmap_whoscored.py) while producing a white-canvas, 3-column infographic
+sized for X/Twitter high-resolution image posts.
+
+Layout (24" × 14" canvas, 200 DPI ≈ 4800 × 2800 px):
+  Row 0 (header):  full-width match info, team badges, score, logos
+  Row 1 (mid):     [Team A Pass Network | Central Stats Table | Team B Pass Network]
+  Row 2 (bottom):  [Team A Shot Map    | Final Third Entries | Team B Shot Map   ]
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+import math
+import json
+import logging
+from pathlib import Path
+from typing import Optional
+
+# Use Agg backend for headless server rendering (must precede pyplot import)
+import matplotlib
+matplotlib.use("Agg")
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.gridspec import GridSpec
+from matplotlib.patches import FancyBboxPatch
+from matplotlib.lines import Line2D
+from mplsoccer import Pitch, VerticalPitch
+
+# ── Import shared logic from parent BCNPROJECT codebase ────────────────────
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(_REPO_ROOT))
+
+from generate_all_assets import (
+    _ws_to_sb_x,
+    _estimate_xg,
+    _player_name,
+    SCALE_Y,
+)
+from Projects.shotmap_whoscored import build_shot_df
+
+from wc2026.team_colors import get_team_colors
+
+# ── Visual constants (white-canvas theme) ──────────────────────────────────
+CANVAS_BG    = "#ffffff"
+DIVIDER_CLR  = "#D3D3D3"
+TEXT_DARK    = "#111111"
+TEXT_MID     = "#555555"
+TEXT_LIGHT   = "#888888"
+PITCH_GREEN  = "#2d572c"
+PITCH_LINE   = "#ffffff"
+PITCH_GREEN_LIGHT = "#3a6b38"
+
+FONT_MAIN    = "DejaVu Sans"
+FONT_BOLD    = "DejaVu Sans"
+
+FIG_W, FIG_H = 24, 14
+FIG_DPI      = 200
+
+logging.basicConfig(level=logging.INFO, format="[WC2026] %(message)s")
+log = logging.getLogger(__name__)
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────
+
+def _hex_to_rgb(hex_color: str) -> tuple[float, float, float]:
+    h = hex_color.lstrip("#")
+    return tuple(int(h[i:i+2], 16) / 255 for i in (0, 2, 4))  # type: ignore
+
+
+def _contrasting_text(bg_hex: str) -> str:
+    r, g, b = _hex_to_rgb(bg_hex)
+    luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return "#ffffff" if luminance < 0.45 else "#111111"
+
+
+def _load_logo(team_name: str, size: tuple[int, int] = (80, 80)):
+    """Return a PIL Image for the team logo, or None if not found."""
+    try:
+        from PIL import Image
+        logo_dir = _REPO_ROOT / "team_logos" / "wc2026"
+        for ext in ("png", "jpg", "svg"):
+            p = logo_dir / f"{team_name}.{ext}"
+            if p.exists():
+                img = Image.open(p).convert("RGBA")
+                img.thumbnail(size, Image.LANCZOS)
+                return img
+    except Exception:
+        pass
+    return None
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# SECTION 1 – HEADER
+# ══════════════════════════════════════════════════════════════════════════
+
+def _draw_header(fig: plt.Figure, ax: plt.Axes, match_data: dict) -> None:
+    """
+    Renders the header section:
+      • Match stage + date/venue/city line (top center)
+      • Two colored team badges with score between them (center)
+      • Team logos in top-left and top-right corners
+    """
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+    ax.set_facecolor(CANVAS_BG)
+
+    meta   = match_data.get("wc_metadata", {})
+    home_d = match_data.get("home", {})
+    away_d = match_data.get("away", {})
+
+    home_name  = home_d.get("name", "Home")
+    away_name  = away_d.get("name", "Away")
+    home_score = home_d.get("score", 0)
+    away_score = away_d.get("score", 0)
+    home_pk    = home_d.get("penalty_score")
+    away_pk    = away_d.get("penalty_score")
+
+    home_colors = get_team_colors(home_name, fallback_home=True)
+    away_colors = get_team_colors(away_name, fallback_home=False)
+
+    # Override with colors embedded in data if provided
+    if home_d.get("primary_color"):
+        home_colors["primary"] = home_d["primary_color"]
+    if away_d.get("primary_color"):
+        away_colors["primary"] = away_d["primary_color"]
+
+    stage   = meta.get("stage", "FIFA World Cup 2026")
+    group   = meta.get("group")
+    stage_label = f"World Cup 2026 — {stage}" + (f" | Group {group}" if group else "")
+    date_str = meta.get("date", "")
+    venue    = meta.get("venue", "")
+    city_country = meta.get("city", "")
+    if meta.get("country") and meta.get("country") != meta.get("city"):
+        city_country += f", {meta['country']}"
+
+    # ── Stage label ────────────────────────────────────────────────────
+    ax.text(0.5, 0.92, stage_label,
+            ha="center", va="top", fontsize=11, color=TEXT_MID,
+            fontfamily=FONT_MAIN, fontweight="normal",
+            transform=ax.transAxes)
+
+    venue_line = " | ".join(filter(None, [date_str, venue, city_country]))
+    ax.text(0.5, 0.78, venue_line,
+            ha="center", va="top", fontsize=9, color=TEXT_LIGHT,
+            fontfamily=FONT_MAIN,
+            transform=ax.transAxes)
+
+    # ── Team badges (rounded rectangles) ──────────────────────────────
+    badge_w, badge_h = 0.18, 0.44
+    badge_y_center   = 0.38
+    home_x, away_x   = 0.215, 0.785 - badge_w  # left-edge x
+
+    for (bx, bname, bcolors) in [
+        (home_x, home_name, home_colors),
+        (away_x, away_name, away_colors),
+    ]:
+        text_color = _contrasting_text(bcolors["primary"])
+        badge = FancyBboxPatch(
+            (bx, badge_y_center - badge_h / 2),
+            badge_w, badge_h,
+            boxstyle="round,pad=0.02",
+            facecolor=bcolors["primary"],
+            edgecolor=DIVIDER_CLR,
+            linewidth=1.2,
+            transform=ax.transAxes,
+            zorder=3,
+        )
+        ax.add_patch(badge)
+        ax.text(bx + badge_w / 2, badge_y_center,
+                bname, ha="center", va="center",
+                fontsize=12, fontweight="bold", color=text_color,
+                fontfamily=FONT_BOLD, transform=ax.transAxes, zorder=4)
+
+    # ── Score block ────────────────────────────────────────────────────
+    score_txt = f"{home_score}  —  {away_score}"
+    ax.text(0.5, 0.58, score_txt,
+            ha="center", va="center",
+            fontsize=36, fontweight="bold", color=TEXT_DARK,
+            fontfamily=FONT_BOLD, transform=ax.transAxes, zorder=4)
+
+    # Penalty shootout sub-score
+    if home_pk is not None and away_pk is not None:
+        pk_txt = f"({home_pk} – {away_pk}  pens)"
+        ax.text(0.5, 0.22, pk_txt,
+                ha="center", va="center", fontsize=13, color=TEXT_MID,
+                fontfamily=FONT_MAIN, transform=ax.transAxes)
+
+    # ── Team logos ────────────────────────────────────────────────────
+    for (side_name, corners) in [(home_name, [0.01, 0.55, 0.15, 0.40]),
+                                  (away_name, [0.86, 0.55, 0.15, 0.40])]:
+        logo = _load_logo(side_name)
+        if logo is not None:
+            img_ax = fig.add_axes(corners, zorder=5)
+            img_ax.imshow(logo)
+            img_ax.axis("off")
+
+    # ── Thin bottom divider line ───────────────────────────────────────
+    ax.axhline(0.02, color=DIVIDER_CLR, linewidth=0.8)
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# SECTION 2A – PASS NETWORK (per-team, on subplot axes)
+# ══════════════════════════════════════════════════════════════════════════
+
+def _draw_pass_network(ax: plt.Axes, match_data: dict,
+                       team_side: str, team_name: str, color_val: str) -> None:
+    """
+    Mirrors generate_all_assets.generate_passnetwork() but draws onto a
+    pre-existing subplot axes (ax) instead of creating a new figure.
+    Uses VerticalPitch with white background to match white-canvas theme.
+    """
+    tid = match_data.get(team_side, {}).get("teamId")
+    if not tid:
+        ax.text(0.5, 0.5, "No data", ha="center", va="center",
+                fontsize=10, color=TEXT_MID, transform=ax.transAxes)
+        return
+
+    team_block  = match_data.get(team_side, {})
+    jersey_map: dict[int, int] = {}
+    for player in team_block.get("players", []):
+        pid = player.get("playerId")
+        jn  = player.get("shirtNo")
+        if pid is not None and jn is not None:
+            jersey_map[pid] = int(jn)
+
+    events_raw = match_data.get("events", [])
+    rows = []
+    for ev in events_raw:
+        pid = ev.get("playerId")
+        if pid is None:
+            continue
+        rows.append({
+            "id":       ev.get("id"),
+            "event_id": ev.get("eventId", 0),
+            "team_id":  ev.get("teamId"),
+            "type":     ev.get("type", {}).get("displayName", ""),
+            "player_id": pid,
+            "x":        ev.get("x", 0) * 1.2,
+            "y":        80 - ev.get("y", 0) * SCALE_Y,
+            "minute":   ev.get("minute", 0),
+            "second":   ev.get("second", 0),
+            "outcome":  ev.get("outcomeType", {}).get("displayName", ""),
+        })
+
+    df = pd.DataFrame(rows)
+    if df.empty:
+        ax.text(0.5, 0.5, "No event data", ha="center", va="center",
+                fontsize=10, color=TEXT_MID, transform=ax.transAxes)
+        return
+
+    df["newsecond"] = 60 * df["minute"] + df["second"]
+    df = df.sort_values(["newsecond", "event_id"]).reset_index(drop=True)
+
+    sub_df      = df.loc[(df["team_id"] == tid) & (df["type"].isin(["SubstitutionOff", "SubstitutionOn"]))]
+    first_sub   = sub_df["newsecond"].min()
+    if pd.isna(first_sub) or first_sub <= 2700:
+        first_sub = 2700  # 45 minutes
+
+    df_pre = df.loc[df["newsecond"] < first_sub].copy()
+
+    recipients = []
+    for i in range(len(df_pre)):
+        row = df_pre.iloc[i]
+        rec = None
+        if row["team_id"] == tid and row["type"] == "Pass" and row["outcome"] == "Successful":
+            for j in range(i + 1, len(df_pre)):
+                nxt = df_pre.iloc[j]
+                if nxt["team_id"] != tid:
+                    break
+                if nxt["outcome"] == "Successful":
+                    rec = nxt["player_id"]
+                    break
+        recipients.append(rec)
+
+    df_pre["recipient"] = recipients
+    completions = df_pre.loc[
+        (df_pre["team_id"] == tid) &
+        (df_pre["type"] == "Pass") &
+        (df_pre["outcome"] == "Successful")
+    ].dropna(subset=["recipient"]).copy()
+
+    if completions.empty:
+        _draw_empty_pass_network(ax, team_name, color_val, "Insufficient pass data")
+        return
+
+    suc_actions = df_pre.loc[(df_pre["team_id"] == tid) & (df_pre["outcome"] == "Successful")]
+    avg_locs = suc_actions.groupby("player_id").agg({"x": "mean", "y": "mean", "id": "count"})
+    avg_locs.columns = ["x", "y", "count"]
+
+    completions["passer"] = completions["player_id"]
+    passes_between = (
+        completions.groupby(["passer", "recipient"])["id"]
+        .count()
+        .reset_index()
+        .rename(columns={"id": "pass_count"})
+    )
+    passes_between = passes_between.merge(avg_locs, left_on="passer",    right_index=True)
+    passes_between = passes_between.merge(avg_locs, left_on="recipient", right_index=True, suffixes=["", "_end"])
+    passes_between = passes_between.loc[passes_between["pass_count"] >= 3]
+
+    # ── Draw pitch on the supplied axes ───────────────────────────────
+    pitch = VerticalPitch(pitch_type="statsbomb", pitch_color="#ffffff",
+                          line_color="#c7c7c7", linewidth=1.2)
+    pitch.draw(ax=ax)
+    ax.set_facecolor(CANVAS_BG)
+
+    if not passes_between.empty:
+        mn_p = passes_between["pass_count"].min()
+        mx_p = passes_between["pass_count"].max()
+        rng  = max(mx_p - mn_p, 1)
+        MIN_LW, MAX_LW = 1.2, 7.0
+
+        for _, row in passes_between.iterrows():
+            lw = MIN_LW + (row["pass_count"] - mn_p) / rng * (MAX_LW - MIN_LW)
+            al = 0.35 + (row["pass_count"] - mn_p) / rng * 0.55
+            dist  = math.hypot(row["x_end"] - row["x"], row["y_end"] - row["y"])
+            angle = math.atan2(row["y_end"] - row["y"], row["x_end"] - row["x"])
+            delta = min(4.0, dist * 0.35)
+            tx = row["x"] + (dist - delta) * math.cos(angle)
+            ty = row["y"] + (dist - delta) * math.sin(angle)
+            ax.annotate("",
+                xy=(ty, tx), xytext=(row["y"], row["x"]),
+                arrowprops=dict(
+                    arrowstyle="-|>", linewidth=lw,
+                    color=color_val, alpha=al,
+                    connectionstyle="arc3,rad=0.12",
+                ),
+                zorder=1,
+            )
+
+    if not avg_locs.empty:
+        sizes = 180 + avg_locs["count"] * 22
+        pitch.scatter(avg_locs.x, avg_locs.y, s=sizes,
+                      color="white", edgecolors=color_val, linewidth=2,
+                      alpha=1, ax=ax, zorder=2)
+
+        for pid, row in avg_locs.iterrows():
+            jn = jersey_map.get(int(pid), "")
+            if not jn:
+                pname = _player_name(match_data, pid)
+                jn = "".join(n[0] for n in pname.split()[:2]).upper()
+            pitch.annotate(str(jn), xy=(row["x"], row["y"]),
+                           c=color_val, va="center", ha="center",
+                           size=9, weight="bold", ax=ax, zorder=3)
+
+    # Legend for line thickness
+    if not passes_between.empty:
+        q33 = int(np.percentile(passes_between["pass_count"], 33))
+        q67 = int(np.percentile(passes_between["pass_count"], 67))
+        lw_handles = [
+            Line2D([0], [0], color=color_val, lw=1.5, alpha=0.9,
+                   label=f"Low  (≤{q33})"),
+            Line2D([0], [0], color=color_val, lw=4.0, alpha=0.9,
+                   label=f"Med  ({q33+1}–{q67})"),
+            Line2D([0], [0], color=color_val, lw=7.0, alpha=0.9,
+                   label=f"High (>{q67})"),
+        ]
+        leg = ax.legend(handles=lw_handles, loc="lower right",
+                        fontsize=6.5, title="Pass volume",
+                        title_fontsize=6.5, framealpha=0.8,
+                        facecolor="#f5f5f5", edgecolor=DIVIDER_CLR)
+        leg.get_title().set_color(TEXT_MID)
+
+    ax.set_title(f"{team_name}\nPass Network",
+                 fontsize=9, fontweight="bold", color=TEXT_DARK,
+                 fontfamily=FONT_BOLD, pad=4)
+
+
+def _draw_empty_pass_network(ax: plt.Axes, team_name: str,
+                              color_val: str, reason: str = "") -> None:
+    pitch = VerticalPitch(pitch_type="statsbomb", pitch_color="#ffffff",
+                          line_color="#c7c7c7", linewidth=1.2)
+    pitch.draw(ax=ax)
+    ax.set_facecolor(CANVAS_BG)
+    ax.text(0.5, 0.5, reason or "No data",
+            ha="center", va="center", fontsize=9, color=TEXT_LIGHT,
+            transform=ax.transAxes)
+    ax.set_title(f"{team_name}\nPass Network",
+                 fontsize=9, fontweight="bold", color=TEXT_DARK, pad=4)
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# SECTION 2B – CENTRAL STATS TABLE
+# ══════════════════════════════════════════════════════════════════════════
+
+def _draw_stats_table(ax: plt.Axes, match_data: dict,
+                      home_name: str, away_name: str,
+                      home_color: str, away_color: str) -> None:
+    """
+    Minimal 3-column stats table:
+      [Team A value] | [label] | [Team B value]
+    9 rows as specified in the blueprint.
+    """
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+    ax.set_facecolor(CANVAS_BG)
+
+    stats = match_data.get("match_stats", {})
+
+    def _v(key: str, side: str, fmt: str = "{}") -> str:
+        val = stats.get(key, {}).get(side)
+        if val is None:
+            return "—"
+        return fmt.format(val)
+
+    xg_h = stats.get("xg", {}).get("home")
+    xg_a = stats.get("xg", {}).get("away")
+
+    bc_created_h = stats.get("big_chances_created", {}).get("home", "—")
+    bc_missed_h  = stats.get("big_chances_missed",  {}).get("home", 0)
+    bc_created_a = stats.get("big_chances_created", {}).get("away", "—")
+    bc_missed_a  = stats.get("big_chances_missed",  {}).get("away", 0)
+    bc_h = f"{bc_created_h} ({bc_missed_h})" if bc_created_h != "—" else "—"
+    bc_a = f"{bc_created_a} ({bc_missed_a})" if bc_created_a != "—" else "—"
+
+    passes_h = stats.get("passes_total",    {}).get("home", "—")
+    pass_acc_h = stats.get("passes_accuracy", {}).get("home")
+    passes_a = stats.get("passes_total",    {}).get("away", "—")
+    pass_acc_a = stats.get("passes_accuracy", {}).get("away")
+    p_h = f"{passes_h} ({pass_acc_h}%)" if pass_acc_h is not None else str(passes_h)
+    p_a = f"{passes_a} ({pass_acc_a}%)" if pass_acc_a is not None else str(passes_a)
+
+    rows: list[tuple[str, str, str]] = [
+        (f"{xg_h:.2f}" if xg_h is not None else "—",  "xG",                   f"{xg_a:.2f}" if xg_a is not None else "—"),
+        (_v("possession", "home", "{}%"),               "Possession",            _v("possession", "away", "{}%")),
+        (_v("shots_on_target", "home"),                 "Shots on Target",       _v("shots_on_target", "away")),
+        (_v("shots", "home"),                           "Shots",                 _v("shots", "away")),
+        (bc_h,                                          "Big Chances (Missed)",  bc_a),
+        (p_h,                                           "Passes (Accuracy)",     p_a),
+        (_v("duels_won", "home", "{}%"),                "Duels Won",             _v("duels_won", "away", "{}%")),
+        (_v("saves", "home"),                           "Saves",                 _v("saves", "away")),
+        (_v("fouls", "home"),                           "Fouls",                 _v("fouls", "away")),
+    ]
+
+    # Column header with team names
+    ax.text(0.18, 0.97, home_name, ha="center", va="top",
+            fontsize=8, fontweight="bold", color=home_color,
+            fontfamily=FONT_BOLD, transform=ax.transAxes)
+    ax.text(0.82, 0.97, away_name, ha="center", va="top",
+            fontsize=8, fontweight="bold", color=away_color,
+            fontfamily=FONT_BOLD, transform=ax.transAxes)
+
+    # Vertical dividers
+    for xv in (0.36, 0.64):
+        ax.axvline(xv, color=DIVIDER_CLR, linewidth=0.9, ymin=0.02, ymax=0.93)
+
+    # Title divider
+    ax.axhline(0.91, color=DIVIDER_CLR, linewidth=0.8)
+
+    # Title
+    ax.text(0.5, 0.945, "M A T C H   S T A T I S T I C S",
+            ha="center", va="center", fontsize=7.5,
+            color=TEXT_MID, fontfamily=FONT_MAIN,
+            fontweight="bold", transform=ax.transAxes)
+
+    n_rows = len(rows)
+    row_h  = 0.86 / n_rows  # vertical space per row
+    for i, (lv, label, rv) in enumerate(rows):
+        y_center = 0.89 - (i + 0.5) * row_h
+
+        # Zebra stripe
+        if i % 2 == 0:
+            bg = FancyBboxPatch((0.01, y_center - row_h * 0.45), 0.98, row_h * 0.9,
+                                boxstyle="round,pad=0.005",
+                                facecolor="#f7f7f7", edgecolor="none",
+                                transform=ax.transAxes, zorder=0)
+            ax.add_patch(bg)
+
+        ax.text(0.18, y_center, str(lv),
+                ha="center", va="center",
+                fontsize=10, fontweight="bold", color=home_color,
+                fontfamily=FONT_BOLD, transform=ax.transAxes)
+
+        ax.text(0.5, y_center, label,
+                ha="center", va="center",
+                fontsize=7.5, color=TEXT_MID,
+                fontfamily=FONT_MAIN, transform=ax.transAxes)
+
+        ax.text(0.82, y_center, str(rv),
+                ha="center", va="center",
+                fontsize=10, fontweight="bold", color=away_color,
+                fontfamily=FONT_BOLD, transform=ax.transAxes)
+
+    # Thin border around the whole table
+    for spine in ax.spines.values():
+        spine.set_visible(True)
+        spine.set_color(DIVIDER_CLR)
+        spine.set_linewidth(0.8)
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# SECTION 3A – SHOT MAP (half-pitch, per team)
+# ══════════════════════════════════════════════════════════════════════════
+
+def _draw_shot_map(ax: plt.Axes, match_data: dict,
+                   team_side: str, team_name: str, color_val: str) -> None:
+    """
+    Half-pitch (attacking end) shot map on a subplot axes.
+    Green filled circles = goals; transparent circles = non-goals.
+    Circle size scales with per-shot xG.
+    Mirrors shotmap_whoscored.py draw_shotmap() logic.
+    """
+    pitch = VerticalPitch(
+        pitch_type="statsbomb",
+        half=True,
+        pitch_color=PITCH_GREEN,
+        line_color=PITCH_LINE,
+        linewidth=1.5,
+    )
+    pitch.draw(ax=ax)
+    ax.set_facecolor(CANVAS_BG)
+
+    try:
+        df = build_shot_df(match_data, team_name)
+    except Exception:
+        df = pd.DataFrame()
+
+    if df.empty:
+        ax.text(0.5, 0.5, "No shots", ha="center", va="center",
+                fontsize=9, color="white", transform=ax.transAxes)
+        ax.set_title(f"{team_name} — Shot Map",
+                     fontsize=9, fontweight="bold", color=TEXT_DARK, pad=4)
+        return
+
+    import matplotlib.colors as mcolors
+    xg_vals = df["xG"].values
+    norm = mcolors.Normalize(vmin=0, vmax=max(float(xg_vals.max()), 0.4))
+    XG_CMAP = plt.cm.RdYlGn
+
+    for _, row in df.iterrows():
+        is_goal    = bool(row["is_goal"])
+        is_big     = bool(row.get("big_chance", False)) or row.get("situation") == "Penalty"
+        base_size  = 500 * float(row["xG"])
+        size       = base_size * 3 if is_big else base_size
+        size       = max(size, 25)
+
+        colour = color_val if is_goal else "none"
+        edge   = "white"  if is_goal else "#666666"
+        lw     = 2.0      if is_goal else 1.0
+        marker = "o"
+
+        pitch.scatter(
+            row["x"], row["y"],
+            s=size, marker=marker,
+            color=colour,
+            edgecolors=edge,
+            linewidth=lw,
+            alpha=0.92,
+            zorder=3,
+            ax=ax,
+        )
+
+    n_shots   = len(df)
+    n_goals   = int(df["is_goal"].sum())
+    n_target  = int(df["is_on_target"].sum())
+    total_xg  = float(df["xG"].sum())
+
+    ax.set_title(
+        f"{team_name} — Shot Map\n"
+        f"Shots {n_shots} | On Target {n_target} | Goals {n_goals} | xG {total_xg:.2f}",
+        fontsize=8, fontweight="bold", color=TEXT_DARK,
+        fontfamily=FONT_BOLD, pad=4,
+    )
+
+    # Mini legend
+    legend_handles = [
+        Line2D([0], [0], marker="o", color=PITCH_GREEN, markersize=10,
+               markerfacecolor=color_val, markeredgecolor="white",
+               markeredgewidth=1.5, label="Goal"),
+        Line2D([0], [0], marker="o", color=PITCH_GREEN, markersize=8,
+               markerfacecolor="none", markeredgecolor="#666666",
+               markeredgewidth=1.0, label="No Goal"),
+    ]
+    leg = ax.legend(handles=legend_handles, loc="lower left",
+                    fontsize=6.5, framealpha=0.85,
+                    facecolor="#1a3a19", edgecolor="#4a7a49",
+                    labelcolor="white")
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# SECTION 3B – FINAL THIRD ENTRIES MAP (full horizontal pitch, both teams)
+# ══════════════════════════════════════════════════════════════════════════
+
+def _draw_final_third_entries(ax: plt.Axes, match_data: dict,
+                               home_name: str, home_color: str,
+                               away_name: str, away_color: str) -> None:
+    """
+    Full horizontal pitch split down the center.
+    Home (left side → right goal): entries into final third (x crosses 80).
+    Away (right side → left goal): entries mirrored (flipped around x=60).
+
+    Channel breakdown (Left / Central / Right wing) shown as text annotation.
+    """
+    pitch = Pitch(pitch_type="statsbomb",
+                  pitch_color=PITCH_GREEN,
+                  line_color=PITCH_LINE,
+                  linewidth=1.2)
+    pitch.draw(ax=ax)
+    ax.set_facecolor(CANVAS_BG)
+
+    SCALE_X = 1.2
+
+    def _extract_entries(team_side: str) -> pd.DataFrame:
+        tid = match_data.get(team_side, {}).get("teamId")
+        rows = []
+        for ev in match_data.get("events", []):
+            if ev.get("teamId") != tid:
+                continue
+            if ev.get("type", {}).get("displayName") != "Pass":
+                continue
+            outcome = ev.get("outcomeType", {}).get("displayName", "")
+            ex = ev.get("endX")
+            ey = ev.get("endY")
+            if ex is None or ey is None:
+                continue
+            x     = ev.get("x", 0) * SCALE_X
+            y     = 80 - ev.get("y", 0) * SCALE_Y
+            end_x = float(ex) * SCALE_X
+            end_y = 80 - float(ey) * SCALE_Y
+            if x < 80 and end_x >= 80:
+                rows.append({"x": x, "y": y, "end_x": end_x, "end_y": end_y,
+                              "success": outcome == "Successful"})
+        return pd.DataFrame(rows)
+
+    home_df = _extract_entries("home")
+    away_df = _extract_entries("away")
+
+    # Mirror away entries so they appear on the left side of pitch
+    if not away_df.empty:
+        away_df_m = away_df.copy()
+        away_df_m["x"]     = 120 - away_df["x"]
+        away_df_m["end_x"] = 120 - away_df["end_x"]
+        away_df_m["y"]     = away_df["y"]
+        away_df_m["end_y"] = away_df["end_y"]
+    else:
+        away_df_m = pd.DataFrame()
+
+    def _plot_entries(df: pd.DataFrame, color: str, alpha: float = 0.55) -> None:
+        if df.empty:
+            return
+        for _, row in df.iterrows():
+            ax.annotate("",
+                xy=(row["end_x"], row["end_y"]),
+                xytext=(row["x"], row["y"]),
+                arrowprops=dict(
+                    arrowstyle="-|>",
+                    color=color,
+                    linewidth=1.2,
+                    alpha=alpha,
+                    connectionstyle="arc3,rad=0.0",
+                ),
+                zorder=2,
+            )
+
+    _plot_entries(home_df, home_color, alpha=0.6)
+    _plot_entries(away_df_m, away_color, alpha=0.6)
+
+    # ── Channel breakdown labels ──────────────────────────────────────
+    def _channel_counts(df: pd.DataFrame) -> dict[str, int]:
+        if df.empty:
+            return {"L": 0, "C": 0, "R": 0}
+        ly = df["end_y"]
+        return {
+            "L": int((ly < 26.67).sum()),
+            "C": int(((ly >= 26.67) & (ly <= 53.33)).sum()),
+            "R": int((ly > 53.33).sum()),
+        }
+
+    hc = _channel_counts(home_df)
+    ac = _channel_counts(away_df)
+
+    # Home channel bar (right side annotation)
+    for i, (label, key) in enumerate([("LW", "L"), ("CTR", "C"), ("RW", "R")]):
+        ax.text(118, 15 + i * 25, f"{label}: {hc[key]}",
+                ha="right", va="center", fontsize=7,
+                color=home_color, fontfamily=FONT_MAIN, fontweight="bold", zorder=5)
+
+    # Away channel bar (left side annotation, mirrored labels)
+    for i, (label, key) in enumerate([("LW", "L"), ("CTR", "C"), ("RW", "R")]):
+        ax.text(2, 15 + i * 25, f"{label}: {ac[key]}",
+                ha="left", va="center", fontsize=7,
+                color=away_color, fontfamily=FONT_MAIN, fontweight="bold", zorder=5)
+
+    # Team color badges at top
+    ax.text(90, 76, home_name, ha="center", va="top",
+            fontsize=8, fontweight="bold", color=home_color,
+            fontfamily=FONT_BOLD, zorder=5)
+    ax.text(30, 76, away_name, ha="center", va="top",
+            fontsize=8, fontweight="bold", color=away_color,
+            fontfamily=FONT_BOLD, zorder=5)
+
+    n_h = len(home_df)
+    n_a = len(away_df)
+    ax.set_title(
+        f"Final Third Entries\n{home_name}: {n_h}  |  {away_name}: {n_a}",
+        fontsize=9, fontweight="bold", color=TEXT_DARK, pad=4,
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# MAIN RENDER FUNCTION
+# ══════════════════════════════════════════════════════════════════════════
+
+def render_wc_dashboard(match_data: dict, output_path: str) -> str:
+    """
+    Render the complete WC 2026 analytics dashboard as a high-resolution PNG.
+
+    Args:
+        match_data:   WhoScored-compatible dict with 'wc_metadata', 'home', 'away',
+                      'events', and 'match_stats' keys.
+        output_path:  Full path for the output .png file.
+
+    Returns:
+        output_path on success.
+    """
+    home_d = match_data.get("home", {})
+    away_d = match_data.get("away", {})
+    home_name = home_d.get("name", "Home")
+    away_name = away_d.get("name", "Away")
+
+    home_colors = get_team_colors(home_name, fallback_home=True)
+    away_colors = get_team_colors(away_name, fallback_home=False)
+    if home_d.get("primary_color"):
+        home_colors["primary"] = home_d["primary_color"]
+    if away_d.get("primary_color"):
+        away_colors["primary"] = away_d["primary_color"]
+
+    home_color = home_colors["primary"]
+    away_color = away_colors["primary"]
+
+    log.info("Rendering dashboard: %s vs %s", home_name, away_name)
+
+    # ── Figure & GridSpec ────────────────────────────────────────────
+    fig = plt.figure(figsize=(FIG_W, FIG_H), facecolor=CANVAS_BG)
+    gs  = GridSpec(
+        nrows=3, ncols=3,
+        figure=fig,
+        height_ratios=[1.55, 4.20, 4.25],
+        hspace=0.06,
+        wspace=0.04,
+        left=0.01, right=0.99,
+        top=0.98, bottom=0.01,
+    )
+
+    # ── Header ──────────────────────────────────────────────────────
+    ax_header = fig.add_subplot(gs[0, :])
+    _draw_header(fig, ax_header, match_data)
+
+    # ── Vertical dividers between main sections ───────────────────
+    # (Handled via tight_layout spacing + individual subplot borders)
+
+    # ── Middle row ───────────────────────────────────────────────────
+    ax_pn_home  = fig.add_subplot(gs[1, 0])
+    ax_stats    = fig.add_subplot(gs[1, 1])
+    ax_pn_away  = fig.add_subplot(gs[1, 2])
+
+    _draw_pass_network(ax_pn_home,  match_data, "home", home_name, home_color)
+    _draw_stats_table(ax_stats,     match_data, home_name, away_name, home_color, away_color)
+    _draw_pass_network(ax_pn_away,  match_data, "away", away_name, away_color)
+
+    # Section divider between rows 1 and 2
+    for ax in (ax_pn_home, ax_stats, ax_pn_away):
+        for spine in ax.spines.values():
+            spine.set_color(DIVIDER_CLR)
+            spine.set_linewidth(0.7)
+
+    # ── Bottom row ───────────────────────────────────────────────────
+    ax_sm_home  = fig.add_subplot(gs[2, 0])
+    ax_ft       = fig.add_subplot(gs[2, 1])
+    ax_sm_away  = fig.add_subplot(gs[2, 2])
+
+    _draw_shot_map(ax_sm_home, match_data, "home", home_name, home_color)
+    _draw_final_third_entries(ax_ft, match_data, home_name, home_color, away_name, away_color)
+    _draw_shot_map(ax_sm_away, match_data, "away", away_name, away_color)
+
+    for ax in (ax_sm_home, ax_ft, ax_sm_away):
+        for spine in ax.spines.values():
+            spine.set_color(DIVIDER_CLR)
+            spine.set_linewidth(0.7)
+
+    # ── Save ─────────────────────────────────────────────────────────
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+    fig.savefig(output_path, dpi=FIG_DPI, bbox_inches="tight",
+                facecolor=CANVAS_BG, edgecolor="none")
+    plt.close(fig)
+
+    log.info("Dashboard saved → %s", output_path)
+    return output_path
+
+
+def output_filename(match_data: dict, output_dir: str = ".") -> str:
+    """
+    Generate canonical output filename:
+      YYYY_MM_DD_[HomeTeam]_vs_[AwayTeam].png
+    """
+    meta   = match_data.get("wc_metadata", {})
+    date   = meta.get("date", "2026_06_01").replace("-", "_")
+    home   = match_data.get("home", {}).get("name", "Home").replace(" ", "_")
+    away   = match_data.get("away", {}).get("name", "Away").replace(" ", "_")
+    fname  = f"{date}_{home}_vs_{away}.png"
+    return os.path.join(output_dir, fname)
