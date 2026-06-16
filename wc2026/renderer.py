@@ -48,14 +48,16 @@ from Projects.shotmap_whoscored import build_shot_df
 from wc2026.team_colors import get_team_colors
 
 # ── Visual constants (white-canvas theme) ──────────────────────────────────
-CANVAS_BG    = "#ffffff"
-DIVIDER_CLR  = "#D3D3D3"
-TEXT_DARK    = "#111111"
-TEXT_MID     = "#555555"
-TEXT_LIGHT   = "#888888"
-PITCH_GREEN  = "#2d572c"
-PITCH_LINE   = "#ffffff"
+CANVAS_BG       = "#ffffff"
+DIVIDER_CLR     = "#D3D3D3"
+TEXT_DARK       = "#111111"
+TEXT_MID        = "#555555"
+TEXT_LIGHT      = "#888888"
+PITCH_GREEN     = "#2d572c"   # kept for backwards compat
+PITCH_LINE      = "#ffffff"
 PITCH_GREEN_LIGHT = "#3a6b38"
+PITCH_WHITE     = "#f5f5f5"   # clean white/off-white pitch surface
+PITCH_LINE_DARK = "#888888"   # visible lines on white pitch
 
 FONT_MAIN    = "DejaVu Sans"
 FONT_BOLD    = "DejaVu Sans"
@@ -100,12 +102,42 @@ def _load_logo(team_name: str, size: tuple[int, int] = (80, 80)):
 # SECTION 1 – HEADER
 # ══════════════════════════════════════════════════════════════════════════
 
+def _place_flag(ax: plt.Axes, team_name: str, xy_axes: tuple[float, float],
+                zoom: float = 0.28) -> None:
+    """
+    Overlay a flag/badge PNG on axes at axes-fraction coordinates (xy_axes).
+    Falls back silently if no image is found.
+    """
+    try:
+        from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+        from PIL import Image
+        import numpy as _np
+
+        logo_dir = _REPO_ROOT / "team_logos" / "wc2026"
+        for ext in ("png", "jpg"):
+            p = logo_dir / f"{team_name}.{ext}"
+            if p.exists():
+                img = Image.open(p).convert("RGBA")
+                oimg = OffsetImage(_np.array(img), zoom=zoom)
+                ab = AnnotationBbox(
+                    oimg, xy_axes,
+                    xycoords="axes fraction",
+                    frameon=False,
+                    box_alignment=(0.5, 0.5),
+                    zorder=6,
+                )
+                ax.add_artist(ab)
+                return
+    except Exception:
+        pass
+
+
 def _draw_header(fig: plt.Figure, ax: plt.Axes, match_data: dict) -> None:
     """
-    Renders the header section:
-      • Match stage + date/venue/city line (top center)
-      • Two colored team badges with score between them (center)
-      • Team logos in top-left and top-right corners
+    Renders the header:
+      Row 1 (top):    Stage label + date/venue
+      Row 2 (center): [HOME FLAG | HOME NAME]  [SCORE]  [AWAY NAME | AWAY FLAG]
+    The score sits horizontally centered between the two team name blocks.
     """
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
@@ -126,83 +158,100 @@ def _draw_header(fig: plt.Figure, ax: plt.Axes, match_data: dict) -> None:
     home_colors = get_team_colors(home_name, fallback_home=True)
     away_colors = get_team_colors(away_name, fallback_home=False)
 
-    # Override with colors embedded in data if provided
     if home_d.get("primary_color"):
         home_colors["primary"] = home_d["primary_color"]
     if away_d.get("primary_color"):
         away_colors["primary"] = away_d["primary_color"]
 
-    stage   = meta.get("stage", "FIFA World Cup 2026")
-    group   = meta.get("group")
-    stage_label = f"World Cup 2026 — {stage}" + (f" | Group {group}" if group else "")
-    date_str = meta.get("date", "")
-    venue    = meta.get("venue", "")
-    city_country = meta.get("city", "")
+    stage       = meta.get("stage", "FIFA World Cup 2026")
+    group       = meta.get("group")
+    stage_label = f"World Cup 2026 — {stage}" + (f"  |  Group {group}" if group else "")
+    date_str    = meta.get("date", "")
+    venue       = meta.get("venue", "")
+    city_c      = meta.get("city", "")
     if meta.get("country") and meta.get("country") != meta.get("city"):
-        city_country += f", {meta['country']}"
+        city_c += f", {meta['country']}"
 
-    # ── Stage label ────────────────────────────────────────────────────
-    ax.text(0.5, 0.92, stage_label,
+    # ── Title line ────────────────────────────────────────────────────
+    ax.text(0.5, 0.96, stage_label,
             ha="center", va="top", fontsize=11, color=TEXT_MID,
             fontfamily=FONT_MAIN, fontweight="normal",
             transform=ax.transAxes)
 
-    venue_line = " | ".join(filter(None, [date_str, venue, city_country]))
-    ax.text(0.5, 0.78, venue_line,
+    venue_line = " | ".join(filter(None, [date_str, venue, city_c]))
+    ax.text(0.5, 0.82, venue_line,
             ha="center", va="top", fontsize=9, color=TEXT_LIGHT,
-            fontfamily=FONT_MAIN,
-            transform=ax.transAxes)
+            fontfamily=FONT_MAIN, transform=ax.transAxes)
 
-    # ── Team badges (rounded rectangles) ──────────────────────────────
-    badge_w, badge_h = 0.18, 0.44
-    badge_y_center   = 0.38
-    home_x, away_x   = 0.215, 0.785 - badge_w  # left-edge x
+    # ── Layout constants ──────────────────────────────────────────────
+    # Three equal horizontal zones: home [0–0.36] | score [0.36–0.64] | away [0.64–1.0]
+    badge_h      = 0.50
+    badge_y_bot  = 0.08
+    badge_y_top  = badge_y_bot + badge_h
+    badge_y_ctr  = badge_y_bot + badge_h / 2  # ≈ 0.33
 
-    for (bx, bname, bcolors) in [
-        (home_x, home_name, home_colors),
-        (away_x, away_name, away_colors),
-    ]:
-        text_color = _contrasting_text(bcolors["primary"])
-        badge = FancyBboxPatch(
-            (bx, badge_y_center - badge_h / 2),
-            badge_w, badge_h,
-            boxstyle="round,pad=0.02",
-            facecolor=bcolors["primary"],
-            edgecolor=DIVIDER_CLR,
-            linewidth=1.2,
-            transform=ax.transAxes,
-            zorder=3,
-        )
-        ax.add_patch(badge)
-        ax.text(bx + badge_w / 2, badge_y_center,
-                bname, ha="center", va="center",
-                fontsize=12, fontweight="bold", color=text_color,
-                fontfamily=FONT_BOLD, transform=ax.transAxes, zorder=4)
+    home_badge_x  = 0.02
+    home_badge_w  = 0.34
+    score_x       = 0.50
+    away_badge_x  = 0.64
+    away_badge_w  = 0.34
 
-    # ── Score block ────────────────────────────────────────────────────
-    score_txt = f"{home_score}  —  {away_score}"
-    ax.text(0.5, 0.58, score_txt,
-            ha="center", va="center",
-            fontsize=36, fontweight="bold", color=TEXT_DARK,
+    # ── Home badge ────────────────────────────────────────────────────
+    home_text_color = _contrasting_text(home_colors["primary"])
+    home_badge = FancyBboxPatch(
+        (home_badge_x, badge_y_bot), home_badge_w, badge_h,
+        boxstyle="round,pad=0.02",
+        facecolor=home_colors["primary"],
+        edgecolor=DIVIDER_CLR, linewidth=1.2,
+        transform=ax.transAxes, zorder=3,
+    )
+    ax.add_patch(home_badge)
+
+    # Flag image inside home badge (left portion)
+    _place_flag(ax, home_name, (home_badge_x + 0.09, badge_y_ctr), zoom=0.25)
+
+    # Home name text (right portion of badge)
+    ax.text(home_badge_x + home_badge_w * 0.72, badge_y_ctr,
+            home_name, ha="center", va="center",
+            fontsize=13, fontweight="bold", color=home_text_color,
             fontfamily=FONT_BOLD, transform=ax.transAxes, zorder=4)
 
-    # Penalty shootout sub-score
+    # ── Away badge ────────────────────────────────────────────────────
+    away_text_color = _contrasting_text(away_colors["primary"])
+    away_badge = FancyBboxPatch(
+        (away_badge_x, badge_y_bot), away_badge_w, badge_h,
+        boxstyle="round,pad=0.02",
+        facecolor=away_colors["primary"],
+        edgecolor=DIVIDER_CLR, linewidth=1.2,
+        transform=ax.transAxes, zorder=3,
+    )
+    ax.add_patch(away_badge)
+
+    # Away name text (left portion of away badge)
+    ax.text(away_badge_x + away_badge_w * 0.28, badge_y_ctr,
+            away_name, ha="center", va="center",
+            fontsize=13, fontweight="bold", color=away_text_color,
+            fontfamily=FONT_BOLD, transform=ax.transAxes, zorder=4)
+
+    # Flag image inside away badge (right portion)
+    _place_flag(ax, away_name, (away_badge_x + away_badge_w * 0.88, badge_y_ctr), zoom=0.25)
+
+    # ── Score — centered between badges ───────────────────────────────
+    score_txt = f"{home_score}  —  {away_score}"
+    ax.text(score_x, badge_y_ctr,
+            score_txt,
+            ha="center", va="center",
+            fontsize=40, fontweight="bold", color=TEXT_DARK,
+            fontfamily=FONT_BOLD, transform=ax.transAxes, zorder=4)
+
+    # Penalty sub-score
     if home_pk is not None and away_pk is not None:
-        pk_txt = f"({home_pk} – {away_pk}  pens)"
-        ax.text(0.5, 0.22, pk_txt,
-                ha="center", va="center", fontsize=13, color=TEXT_MID,
+        ax.text(score_x, badge_y_bot - 0.03,
+                f"({home_pk} – {away_pk} pens)",
+                ha="center", va="top", fontsize=11, color=TEXT_MID,
                 fontfamily=FONT_MAIN, transform=ax.transAxes)
 
-    # ── Team logos ────────────────────────────────────────────────────
-    for (side_name, corners) in [(home_name, [0.01, 0.55, 0.15, 0.40]),
-                                  (away_name, [0.86, 0.55, 0.15, 0.40])]:
-        logo = _load_logo(side_name)
-        if logo is not None:
-            img_ax = fig.add_axes(corners, zorder=5)
-            img_ax.imshow(logo)
-            img_ax.axis("off")
-
-    # ── Thin bottom divider line ───────────────────────────────────────
+    # ── Divider ───────────────────────────────────────────────────────
     ax.axhline(0.02, color=DIVIDER_CLR, linewidth=0.8)
 
 
@@ -512,12 +561,11 @@ def _draw_shot_map(ax: plt.Axes, match_data: dict,
     pitch = VerticalPitch(
         pitch_type="statsbomb",
         half=True,
-        pitch_color=PITCH_GREEN,
-        line_color=PITCH_LINE,
+        pitch_color=PITCH_WHITE,
+        line_color=PITCH_LINE_DARK,
         linewidth=1.5,
     )
     pitch.draw(ax=ax)
-    ax.set_facecolor(CANVAS_BG)
 
     try:
         df = build_shot_df(match_data, team_name)
@@ -573,17 +621,17 @@ def _draw_shot_map(ax: plt.Axes, match_data: dict,
 
     # Mini legend
     legend_handles = [
-        Line2D([0], [0], marker="o", color=PITCH_GREEN, markersize=10,
-               markerfacecolor=color_val, markeredgecolor="white",
+        Line2D([0], [0], marker="o", color=PITCH_WHITE, markersize=10,
+               markerfacecolor=color_val, markeredgecolor="#444444",
                markeredgewidth=1.5, label="Goal"),
-        Line2D([0], [0], marker="o", color=PITCH_GREEN, markersize=8,
+        Line2D([0], [0], marker="o", color=PITCH_WHITE, markersize=8,
                markerfacecolor="none", markeredgecolor="#666666",
                markeredgewidth=1.0, label="No Goal"),
     ]
     leg = ax.legend(handles=legend_handles, loc="lower left",
                     fontsize=6.5, framealpha=0.85,
-                    facecolor="#1a3a19", edgecolor="#4a7a49",
-                    labelcolor="white")
+                    facecolor="#eeeeee", edgecolor="#aaaaaa",
+                    labelcolor="#111111")
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -601,11 +649,10 @@ def _draw_final_third_entries(ax: plt.Axes, match_data: dict,
     Channel breakdown (Left / Central / Right wing) shown as text annotation.
     """
     pitch = Pitch(pitch_type="statsbomb",
-                  pitch_color=PITCH_GREEN,
-                  line_color=PITCH_LINE,
+                  pitch_color=PITCH_WHITE,
+                  line_color=PITCH_LINE_DARK,
                   linewidth=1.2)
     pitch.draw(ax=ax)
-    ax.set_facecolor(CANVAS_BG)
 
     SCALE_X = 1.2
 
@@ -690,18 +737,29 @@ def _draw_final_third_entries(ax: plt.Axes, match_data: dict,
                 ha="left", va="center", fontsize=7,
                 color=away_color, fontfamily=FONT_MAIN, fontweight="bold", zorder=5)
 
-    # Team color badges at top
+    # Success / attempt counts
+    n_h       = len(home_df)
+    n_a       = len(away_df)
+    n_h_succ  = int(home_df["success"].sum()) if not home_df.empty else 0
+    n_a_succ  = int(away_df["success"].sum()) if not away_df.empty else 0
+    h_pct     = f"{100 * n_h_succ // n_h}%" if n_h else "—"
+    a_pct     = f"{100 * n_a_succ // n_a}%" if n_a else "—"
+
+    # Team name + made/attempted badge
     ax.text(90, 76, home_name, ha="center", va="top",
             fontsize=8, fontweight="bold", color=home_color,
             fontfamily=FONT_BOLD, zorder=5)
+    ax.text(90, 70, f"{n_h_succ}/{n_h} made ({h_pct})", ha="center", va="top",
+            fontsize=7, color=home_color, fontfamily=FONT_MAIN, zorder=5)
+
     ax.text(30, 76, away_name, ha="center", va="top",
             fontsize=8, fontweight="bold", color=away_color,
             fontfamily=FONT_BOLD, zorder=5)
+    ax.text(30, 70, f"{n_a_succ}/{n_a} made ({a_pct})", ha="center", va="top",
+            fontsize=7, color=away_color, fontfamily=FONT_MAIN, zorder=5)
 
-    n_h = len(home_df)
-    n_a = len(away_df)
     ax.set_title(
-        f"Final Third Entries\n{home_name}: {n_h}  |  {away_name}: {n_a}",
+        f"Final Third Entries\n{home_name}: {n_h_succ}/{n_h}  |  {away_name}: {n_a_succ}/{n_a}",
         fontsize=9, fontweight="bold", color=TEXT_DARK, pad=4,
     )
 
