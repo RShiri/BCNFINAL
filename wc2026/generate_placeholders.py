@@ -25,7 +25,7 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 # 3-letter abbreviations for every WC2026 participant + common extras
 ABBREVS: dict[str, str] = {
     # Group A
-    "USA":              "USA",  "United States": "USA",
+    "USA":              "USA",
     "Mexico":           "MEX",
     "Panama":           "PAN",
     "Honduras":         "HON",
@@ -83,22 +83,6 @@ ABBREVS: dict[str, str] = {
     "Greece":           "GRE",
     "Ukraine":          "UKR",
     "Venezuela":        "VEN",
-    # Extras / test matches
-    "Cape Verde":       "CPV",
-    "Scotland":         "SCO",
-    "Egypt":            "EGY",
-    "DR Congo":         "COD",
-    "Iraq":             "IRQ",
-    "Jordan":           "JOR",
-    "Norway":           "NOR",
-    "Uzbekistan":       "UZB",
-    "Bolivia":          "BOL",
-    "Austria":          "AUT",
-    "Czechia":          "CZE",
-    "Haiti":            "HAI",
-    "Bosnia-Herzegovina": "BIH",
-    "New Zealand":      "NZL",
-    "South Africa":     "RSA",
 }
 
 def _shield_path() -> mpath.Path:
@@ -156,11 +140,7 @@ def make_badge(name: str, force: bool = False) -> None:
 
 def make_all_badges(force: bool = False) -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    seen = set()
     for name in ABBREVS:
-        if name in seen:
-            continue
-        seen.add(name)
         make_badge(name, force=force)
 
 
@@ -171,7 +151,7 @@ if __name__ == "__main__":
                         help="Overwrite existing badge files")
     args = parser.parse_args()
 
-    teams = [n for n in ABBREVS if n not in {"United States"}]  # skip alias
+    teams = list(ABBREVS.keys())
     print(f"Generating {len(teams)} shield crests → {OUT_DIR}\n")
     for t in teams:
         make_badge(t, force=args.force)
