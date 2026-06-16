@@ -93,6 +93,11 @@ When resuming development in this repository, share the following directives wit
 > 1. **Do Not Stage `__pycache__`**: A `.gitignore` is active. Ensure all temporary system metadata (`.DS_Store`, `.idea`) is kept out of commits.
 > 2. **File Size Awareness**: The repository contains large generated files (PNGs, caches, and a 51MB SQLite database). Keep this in mind when pulling or performing large git operations.
 > 3. **Run Pipeline for Changes**: If you modify the plotting formulas (e.g. progressive pass metrics or xG estimation curves), run `python pipeline.py --assets-only` to batch-regenerate all PNGs and interactive HTML assets.
-> 4. **Coordinate Scaling**: Always remember coordinates from WhoScored are stored on a `0-100` scale. The Python visualization layer converts them using:
+> 4. **Coordinate Scaling**: WhoScored coordinates `(0-100)` are translated to StatsBomb coordinates `(120x80)` using:
 >    *   `X_StatsBomb = X_WhoScored * 1.2`
->    *   `Y_StatsBomb = 80 - (Y_WhoScored * 0.8)`
+>    *   `Y_StatsBomb = 80 - (Y_WhoScored * 0.8)` (where Y=0 is the top touchline/left wing, Y=80 is the bottom touchline/right wing).
+>    *   **Plotly Visualizations**: Plotly uses standard Cartesian charts where Y increases upwards. To align with StatsBomb layout conventions, Plotly charts use reversed Y-axis ranges (e.g. `yaxis: {range: [82, -2]}` for dribble maps, `yaxis: {range: [84, -4]}` for shotmaps).
+> 5. **Goalmouth Shot Map Dimensions**:
+>    *   The goalmouth aspect ratio is locked at a true 3:1 ratio (width `100`, height `33.33`) representing a standard 7.32m x 2.44m goal frame.
+>    *   WhoScored raw `GoalMouthY` coordinates (range `[45, 55]`) are scaled to `[0, 100]` before plotting.
+>    *   Plotly `yaxis` has `scaleanchor: "x"` and `scaleratio: 1.0` to prevent dimension distortion across screen sizes, with container height set to `380px` and tight padding ranges (`[-4, 104]` on X, `[-2, 38]` on Y).
