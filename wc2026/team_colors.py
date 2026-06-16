@@ -6,6 +6,7 @@ Colors sourced from each federation's official kit palette.
 WC2026_TEAM_COLORS: dict[str, dict[str, str]] = {
     # Group A – Host: United States
     "United States":    {"primary": "#002868", "secondary": "#BF0A30"},
+    "USA":              {"primary": "#002868", "secondary": "#BF0A30"},
     "Mexico":           {"primary": "#006847", "secondary": "#FFFFFF"},
     "Panama":           {"primary": "#D21034", "secondary": "#FFFFFF"},
     "Honduras":         {"primary": "#0039A6", "secondary": "#FFFFFF"},

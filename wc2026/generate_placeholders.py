@@ -1,13 +1,9 @@
 """
-Generate proper shield-crest badges for all 48 WC2026 nations.
-Each crest uses national primary/secondary colours with a shield outline,
-country abbreviation, and a subtle stripe pattern.
+Generate clean placeholder shield-crest badges for all 48 WC2026 nations.
+Each badge is a white/neutral shield with 3-letter abbreviation — drop the real
+PNG (named <Team Name>.png) into team_logos/wc2026/ to override.
 
-Run:  python wc2026/generate_placeholders.py
-      (or call make_all_badges() from code)
-
-Place real PNG badges (any size) in team_logos/wc2026/<Team Name>.png
-to override the generated ones.
+Run:  python wc2026/generate_placeholders.py [--force]
 """
 
 from __future__ import annotations
@@ -23,70 +19,100 @@ import matplotlib.path as mpath
 import numpy as np
 
 _REPO = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(_REPO))
-
-from wc2026.team_colors import get_team_colors
-
 OUT_DIR = _REPO / "team_logos" / "wc2026"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# 3-letter abbreviations used on the crest
+# 3-letter abbreviations for every WC2026 participant + common extras
 ABBREVS: dict[str, str] = {
-    "Mexico":              "MEX", "South Africa":      "RSA", "Czechia":           "CZE",
-    "Ghana":               "GHA", "South Korea":       "KOR", "Canada":            "CAN",
-    "Bosnia-Herzegovina":  "BIH", "Scotland":          "SCO", "Bolivia":           "BOL",
-    "Australia":           "AUS", "Nigeria":           "NGA", "Iran":              "IRN",
-    "USA":                 "USA", "Morocco":           "MAR", "Ukraine":           "UKR",
-    "Paraguay":            "PAR", "Brazil":            "BRA", "Netherlands":       "NED",
-    "Croatia":             "CRO", "Panama":            "PAN", "Germany":           "GER",
-    "Spain":               "ESP", "Switzerland":       "SUI", "Qatar":             "QAT",
-    "France":              "FRA", "Senegal":           "SEN", "Iraq":              "IRQ",
-    "Norway":              "NOR", "Belgium":           "BEL", "Egypt":             "EGY",
-    "Uruguay":             "URU", "Cape Verde":        "CPV", "Saudi Arabia":      "KSA",
-    "Haiti":               "HAI", "New Zealand":       "NZL", "Japan":             "JPN",
-    "Argentina":           "ARG", "Algeria":           "ALG", "Austria":           "AUT",
-    "Jordan":              "JOR", "Portugal":          "POR", "Colombia":          "COL",
-    "Uzbekistan":          "UZB", "DR Congo":          "COD", "England":           "ENG",
+    # Group A
+    "USA":              "USA",  "United States": "USA",
+    "Mexico":           "MEX",
+    "Panama":           "PAN",
+    "Honduras":         "HON",
+    # Group B
+    "Canada":           "CAN",
+    "Morocco":          "MAR",
+    "Portugal":         "POR",
+    "Argentina":        "ARG",
+    # Group C
+    "Germany":          "GER",
+    "Japan":            "JPN",
+    "Senegal":          "SEN",
+    "Costa Rica":       "CRC",
+    # Group D
+    "Spain":            "ESP",
+    "Croatia":          "CRO",
+    "Australia":        "AUS",
+    "Algeria":          "ALG",
+    # Group E
+    "France":           "FRA",
+    "Netherlands":      "NED",
+    "Ecuador":          "ECU",
+    "Saudi Arabia":     "KSA",
+    # Group F
+    "Brazil":           "BRA",
+    "England":          "ENG",
+    "Serbia":           "SRB",
+    "South Korea":      "KOR",
+    # Group G
+    "Uruguay":          "URU",
+    "Belgium":          "BEL",
+    "Tunisia":          "TUN",
+    "Colombia":         "COL",
+    # Group H
+    "Switzerland":      "SUI",
+    "Chile":            "CHI",
+    "Poland":           "POL",
+    "Romania":          "ROU",
+    # Group I
+    "Italy":            "ITA",
+    "Nigeria":          "NGA",
+    "Paraguay":         "PAR",
+    "Indonesia":        "INA",
+    # Group J
+    "Ghana":            "GHA",
+    "Guatemala":        "GUA",
+    "Qatar":            "QAT",
+    # Group K
+    "Denmark":          "DEN",
+    "Iran":             "IRN",
+    "New Zealand":      "NZL",
+    "Cameroon":         "CMR",
+    # Group L
+    "South Africa":     "RSA",
+    "Greece":           "GRE",
+    "Ukraine":          "UKR",
+    "Venezuela":        "VEN",
+    # Extras / test matches
+    "Cape Verde":       "CPV",
+    "Scotland":         "SCO",
+    "Egypt":            "EGY",
+    "DR Congo":         "COD",
+    "Iraq":             "IRQ",
+    "Jordan":           "JOR",
+    "Norway":           "NOR",
+    "Uzbekistan":       "UZB",
+    "Bolivia":          "BOL",
+    "Austria":          "AUT",
+    "Czechia":          "CZE",
+    "Haiti":            "HAI",
+    "Bosnia-Herzegovina": "BIH",
+    "New Zealand":      "NZL",
+    "South Africa":     "RSA",
 }
 
-# Teams that have won the World Cup (gold star on crest)
-WC_WINNERS = {"Brazil", "Germany", "France", "Argentina", "Uruguay",
-              "Spain", "England", "Italy"}
-
-
-def _hex_to_rgb(h: str) -> tuple[float, float, float]:
-    h = h.lstrip("#")
-    return tuple(int(h[i:i+2], 16) / 255 for i in (0, 2, 4))  # type: ignore
-
-
-def _lum(h: str) -> float:
-    r, g, b = _hex_to_rgb(h)
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
-
-
 def _shield_path() -> mpath.Path:
-    """
-    Shield / heraldic crest outline.
-    Normalised: x in [0,1], y in [0,1]. Tip at (0.5, 0).
-    """
     verts = np.array([
-        [0.08, 1.00],  # top-left
-        [0.92, 1.00],  # top-right
-        [0.92, 0.42],  # right shoulder
-        [0.50, 0.00],  # bottom tip
-        [0.08, 0.42],  # left shoulder
-        [0.08, 1.00],  # close
+        [0.10, 0.97],
+        [0.90, 0.97],
+        [0.90, 0.38],
+        [0.50, 0.03],
+        [0.10, 0.38],
+        [0.10, 0.97],
     ])
-    codes = [
-        mpath.Path.MOVETO,
-        mpath.Path.LINETO,
-        mpath.Path.CURVE3,   # smooth right shoulder
-        mpath.Path.LINETO,
-        mpath.Path.CURVE3,   # smooth left shoulder
-        mpath.Path.CLOSEPOLY,
-    ]
-    # Fix: CURVE3 needs pairs; use LINETO for all for simplicity
-    codes = [mpath.Path.MOVETO] + [mpath.Path.LINETO] * 4 + [mpath.Path.CLOSEPOLY]
+    codes = ([mpath.Path.MOVETO]
+             + [mpath.Path.LINETO] * 4
+             + [mpath.Path.CLOSEPOLY])
     return mpath.Path(verts, codes)
 
 
@@ -95,77 +121,34 @@ def make_badge(name: str, force: bool = False) -> None:
     if dest.exists() and not force:
         return
 
-    colors  = get_team_colors(name, fallback_home=True)
-    primary = colors["primary"]
-    sec     = colors.get("secondary", "#ffffff")
-    abbr    = ABBREVS.get(name, name[:3].upper())
-    won_wc  = name in WC_WINNERS
+    abbr = ABBREVS.get(name, name[:3].upper())
 
-    # Canvas: square 200×200
     DPI = 100
     fig = plt.figure(figsize=(2.0, 2.0), dpi=DPI)
-    fig.patch.set_alpha(0.0)   # transparent figure background
+    fig.patch.set_alpha(0.0)
     ax = fig.add_axes([0, 0, 1, 1])
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
     ax.set_facecolor("none")
 
-    # ── Shield fill ────────────────────────────────────────────────
-    shield_verts = np.array([
-        [0.10, 0.97],
-        [0.90, 0.97],
-        [0.90, 0.38],
-        [0.50, 0.03],
-        [0.10, 0.38],
-        [0.10, 0.97],
-    ])
-    shield_codes = ([mpath.Path.MOVETO]
-                    + [mpath.Path.LINETO] * 4
-                    + [mpath.Path.CLOSEPOLY])
-    shield = mpath.Path(shield_verts, shield_codes)
+    shield = _shield_path()
 
-    # Primary fill
+    # White fill
     ax.add_patch(mpatches.PathPatch(
-        shield, facecolor=primary, edgecolor="none", zorder=1))
+        shield, facecolor="#FFFFFF", edgecolor="none", zorder=1))
 
-    # Secondary colour stripe (bottom third of shield)
-    # Clip the stripe to the shield using a clipping patch
-    stripe_verts = np.array([
-        [0.10, 0.50],
-        [0.90, 0.50],
-        [0.90, 0.38],
-        [0.50, 0.03],
-        [0.10, 0.38],
-        [0.10, 0.50],
-    ])
-    stripe_codes = ([mpath.Path.MOVETO]
-                    + [mpath.Path.LINETO] * 4
-                    + [mpath.Path.CLOSEPOLY])
-    ax.add_patch(mpatches.PathPatch(
-        mpath.Path(stripe_verts, stripe_codes),
-        facecolor=sec, edgecolor="none", zorder=2))
-
-    # Shield outline
-    outline_color = "#ffffff" if _lum(primary) < 0.25 else "#222222"
+    # Dark border
     ax.add_patch(mpatches.PathPatch(
         shield, facecolor="none",
-        edgecolor=outline_color, linewidth=2.5, zorder=5))
+        edgecolor="#222222", linewidth=3.0, zorder=5))
 
-    # ── Gold star (world cup winner) ───────────────────────────────
-    if won_wc:
-        ax.text(0.50, 0.90, "★", ha="center", va="center",
-                fontsize=13, color="#FFD700", zorder=6,
-                fontweight="bold")
-
-    # ── Country abbreviation ───────────────────────────────────────
-    txt_color = "#ffffff" if _lum(primary) < 0.45 else "#111111"
-    ax.text(0.50, 0.60, abbr,
+    # Abbreviation text
+    ax.text(0.50, 0.55, abbr,
             ha="center", va="center",
-            fontsize=20, fontweight="bold",
-            color=txt_color, zorder=6)
+            fontsize=22, fontweight="bold",
+            color="#111111", zorder=6)
 
-    # ── Save transparent PNG ───────────────────────────────────────
     plt.savefig(dest, dpi=DPI, transparent=True,
                 bbox_inches="tight", pad_inches=0)
     plt.close(fig)
@@ -173,7 +156,11 @@ def make_badge(name: str, force: bool = False) -> None:
 
 def make_all_badges(force: bool = False) -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    seen = set()
     for name in ABBREVS:
+        if name in seen:
+            continue
+        seen.add(name)
         make_badge(name, force=force)
 
 
@@ -184,7 +171,7 @@ if __name__ == "__main__":
                         help="Overwrite existing badge files")
     args = parser.parse_args()
 
-    teams = list(ABBREVS.keys())
+    teams = [n for n in ABBREVS if n not in {"United States"}]  # skip alias
     print(f"Generating {len(teams)} shield crests → {OUT_DIR}\n")
     for t in teams:
         make_badge(t, force=args.force)

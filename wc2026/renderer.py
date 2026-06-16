@@ -33,17 +33,118 @@ from matplotlib.patches import FancyBboxPatch
 from matplotlib.lines import Line2D
 from mplsoccer import Pitch, VerticalPitch
 
-# ── Import shared logic from parent BCNPROJECT codebase ────────────────────
-_REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(_REPO_ROOT))
+# ── Self-contained coordinate + shot helpers (no external BCNFINAL deps) ────
 
-from generate_all_assets import (
-    _ws_to_sb_x,
-    _estimate_xg,
-    _player_name,
-    SCALE_Y,
-)
-from Projects.shotmap_whoscored import build_shot_df
+SCALE_Y = 0.80  # WhoScored y 0-100 → StatsBomb 0-80
+
+def _ws_to_sb_x(ws_x):
+    """Piecewise-linear WhoScored x → StatsBomb x."""
+    if ws_x <= 50:
+        return ws_x * (60.0 / 50.0)
+    elif ws_x <= 89:
+        return 60.0 + (ws_x - 50) * (48.0 / 39.0)
+    else:
+        return 108.0 + (ws_x - 89) * (12.0 / 11.0)
+
+def _estimate_xg(x_sb, y_sb, is_penalty, is_big_chance, body_part):
+    if is_penalty:
+        return 0.76
+    dx = 120.0 - x_sb
+    dy = 40.0 - y_sb
+    distance = max(np.sqrt(dx**2 + dy**2), 0.5)
+    angle = np.arctan2(4.0, distance)
+    xg = (angle / (np.pi / 2)) * (1 / (1 + distance / 30))
+    if body_part == "Header":
+        xg *= 0.4
+    if is_big_chance:
+        xg = min(0.65, max(0.35, xg * 3.5))
+    if distance > 18:
+        xg *= (18 / distance) ** 2
+    return round(min(max(xg, 0.01), 0.95), 3)
+
+def _player_name(match_data, player_id):
+    for side in ("home", "away"):
+        for p in match_data.get(side, {}).get("players", []):
+            if p.get("playerId") == player_id:
+                name = p.get("name", "")
+                parts = name.split()
+                return parts[-1] if len(parts) >= 2 else name
+    return str(player_id)
+
+def _player_full_name(match_data, player_id):
+    for side in ("home", "away"):
+        for p in match_data.get(side, {}).get("players", []):
+            if p.get("playerId") == player_id:
+                return p.get("name", str(player_id))
+    return str(player_id)
+
+def _is_shot(ev):
+    return ev.get("type", {}).get("displayName", "") in (
+        "MissedShots", "SavedShot", "ShotOnPost", "Goal"
+    )
+
+def _extract_qualifiers(ev):
+    qual_list = ev.get("qualifiers", [])
+    quals = {q.get("type", {}).get("displayName", "") for q in qual_list}
+    body = ("Right Foot" if "RightFoot" in quals else
+            "Left Foot"  if "LeftFoot"  in quals else
+            "Header"     if "Head"      in quals else "Unknown")
+    situation = ("Penalty"    if "Penalty"        in quals else
+                 "Free Kick"  if "DirectFreekick" in quals else
+                 "Fast Break" if "FastBreak"      in quals else
+                 "Open Play")
+    if any(z in quals for z in ("SmallBoxCentre", "SmallBoxLeft", "SmallBoxRight",
+                                 "DeepBoxCentre",  "DeepBoxLeft",  "DeepBoxRight")):
+        zone = "6-Yard Box"
+    elif any(z in quals for z in ("BoxCentre", "BoxLeft", "BoxRight")):
+        zone = "Inside Box"
+    else:
+        zone = "Outside Box"
+    big_chance = "BigChance" in quals
+    one_on_one = "OneOnOne"  in quals
+    gm_y = gm_z = None
+    for q in qual_list:
+        qname = q.get("type", {}).get("displayName", "")
+        try:
+            if qname == "GoalMouthY":   gm_y = float(q.get("value", 0))
+            elif qname == "GoalMouthZ": gm_z = float(q.get("value", 0))
+        except (TypeError, ValueError):
+            pass
+    return body, situation, zone, big_chance, one_on_one, gm_y, gm_z
+
+def build_shot_df(match_data, team_name):
+    """Build shot DataFrame for team_name from WhoScored-format match_data."""
+    tid = None
+    for side in ("home", "away"):
+        info = match_data.get(side, {})
+        if team_name.lower() in info.get("name", "").lower():
+            tid = info["teamId"]
+            break
+    if tid is None:
+        return pd.DataFrame()
+    rows = []
+    for ev in match_data.get("events", []):
+        if ev.get("teamId") != tid or not _is_shot(ev):
+            continue
+        x_sb = _ws_to_sb_x(ev.get("x", 0))
+        y_sb = 80 - ev.get("y", 0) * SCALE_Y
+        body, situation, zone, big_chance, one_on_one, gm_y, gm_z = _extract_qualifiers(ev)
+        is_penalty = (situation == "Penalty")
+        if is_penalty:
+            x_sb, y_sb = 108.0, 40.0
+        rows.append({
+            "x": x_sb, "y": y_sb,
+            "minute":       ev.get("minute", 0),
+            "player":       _player_name(match_data, ev.get("playerId")),
+            "full_name":    _player_full_name(match_data, ev.get("playerId")),
+            "is_goal":      ev.get("type", {}).get("displayName", "") == "Goal",
+            "is_on_target": ev.get("type", {}).get("displayName", "") in ("SavedShot", "Goal"),
+            "xG":           _estimate_xg(x_sb, y_sb, is_penalty, big_chance, body),
+            "body_part": body, "situation": situation, "zone": zone,
+            "big_chance": big_chance, "one_on_one": one_on_one,
+            "period": "H1", "gm_y": gm_y, "gm_z": gm_z,
+        })
+    return pd.DataFrame(rows)
 
 from wc2026.team_colors import get_team_colors
 
