@@ -894,7 +894,7 @@ def draw_combined_shotmap(df_home, home_name, df_away, away_name, out_html,
 </div>
 <div id="gfwrap_{token}">
   <div class="gf-title-{token}">Shots on Goal — where they hit the goal frame</div>
-  <div id="gf_{token}" style="height:300px;width:100%"></div>
+  <div id="gf_{token}" style="height:380px;width:100%"></div>
 </div>
 <script>
 (function(){{
@@ -941,9 +941,9 @@ def draw_combined_shotmap(df_home, home_name, df_away, away_name, out_html,
       paper_bgcolor:"#0a0a1e", plot_bgcolor:"#11203a",
       font:{{color:"white"}},
       // Goal is wide & short (3:1). View padded around a 0..100 wide, 0..33.33 tall frame in actual 3:1 aspect ratio.
-      xaxis:{{range:[-8,108], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true}},
+      xaxis:{{range:[-4,104], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true}},
       yaxis:{{
-        range:[-6,48], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true,
+        range:[-2,38], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true,
         scaleanchor:"x", scaleratio:1.0
       }},
       showlegend:true,
