@@ -102,14 +102,14 @@ def _load_logo(team_name: str, size: tuple[int, int] = (80, 80)):
 # SECTION 1 – HEADER
 # ══════════════════════════════════════════════════════════════════════════
 
-def _place_flag(ax: plt.Axes, team_name: str, xy_axes: tuple[float, float],
-                zoom: float = 0.28) -> None:
+def _place_flag(ax: plt.Axes, team_name: str,
+                x_ctr: float, y_ctr: float,
+                w: float = 0.09, h: float = 0.40) -> None:
     """
-    Overlay a flag/badge PNG on axes at axes-fraction coordinates (xy_axes).
-    Falls back silently if no image is found.
+    Overlay a flag image on the header axes.
+    Coordinates are in data space (ax.set_xlim(0,1)/ylim(0,1) == axes fraction).
     """
     try:
-        from matplotlib.offsetbox import OffsetImage, AnnotationBbox
         from PIL import Image
         import numpy as _np
 
@@ -117,16 +117,15 @@ def _place_flag(ax: plt.Axes, team_name: str, xy_axes: tuple[float, float],
         for ext in ("png", "jpg"):
             p = logo_dir / f"{team_name}.{ext}"
             if p.exists():
-                img = Image.open(p).convert("RGBA")
-                oimg = OffsetImage(_np.array(img), zoom=zoom)
-                ab = AnnotationBbox(
-                    oimg, xy_axes,
-                    xycoords="axes fraction",
-                    frameon=False,
-                    box_alignment=(0.5, 0.5),
+                img = _np.array(Image.open(p).convert("RGBA"))
+                ax.imshow(
+                    img,
+                    extent=[x_ctr - w / 2, x_ctr + w / 2,
+                            y_ctr - h / 2, y_ctr + h / 2],
+                    aspect="auto",
                     zorder=6,
+                    interpolation="lanczos",
                 )
-                ax.add_artist(ab)
                 return
     except Exception:
         pass
@@ -141,6 +140,7 @@ def _draw_header(fig: plt.Figure, ax: plt.Axes, match_data: dict) -> None:
     """
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
+    ax.set_autoscale_on(False)   # imshow must not reset our coord space
     ax.axis("off")
     ax.set_facecolor(CANVAS_BG)
 
@@ -208,7 +208,7 @@ def _draw_header(fig: plt.Figure, ax: plt.Axes, match_data: dict) -> None:
     ax.add_patch(home_badge)
 
     # Flag image inside home badge (left portion)
-    _place_flag(ax, home_name, (home_badge_x + 0.09, badge_y_ctr), zoom=0.25)
+    _place_flag(ax, home_name, x_ctr=home_badge_x + 0.09, y_ctr=badge_y_ctr, w=0.09, h=0.38)
 
     # Home name text (right portion of badge)
     ax.text(home_badge_x + home_badge_w * 0.72, badge_y_ctr,
@@ -234,7 +234,7 @@ def _draw_header(fig: plt.Figure, ax: plt.Axes, match_data: dict) -> None:
             fontfamily=FONT_BOLD, transform=ax.transAxes, zorder=4)
 
     # Flag image inside away badge (right portion)
-    _place_flag(ax, away_name, (away_badge_x + away_badge_w * 0.88, badge_y_ctr), zoom=0.25)
+    _place_flag(ax, away_name, x_ctr=away_badge_x + away_badge_w * 0.88, y_ctr=badge_y_ctr, w=0.09, h=0.38)
 
     # ── Score — centered between badges ───────────────────────────────
     score_txt = f"{home_score}  —  {away_score}"
