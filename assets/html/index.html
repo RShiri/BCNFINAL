@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FC Barcelona – 2025/26 Season Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:#0d0d1a;color:#e0e0e0;line-height:1.5}
+a{color:inherit;text-decoration:none}
+
+/* NAV */
+.nav{display:flex;align-items:center;gap:20px;padding:14px 32px;
+  background:#08081a;border-bottom:1px solid #1e1e4a;position:sticky;top:0;z-index:100}
+.nav-logo{font-size:18px;font-weight:900;color:#f5c518;letter-spacing:-0.5px}
+.nav-logo span{color:#004d98}
+.nav a{font-size:13px;color:#9999cc;transition:color .2s}
+.nav a:hover,.nav a.active{color:#fff}
+
+/* CARDS */
+.card{background:#111128;border:1px solid #1e1e4a;border-radius:12px;overflow:hidden;
+  transition:border-color .2s,box-shadow .2s}
+.card:hover{border-color:#4444aa;box-shadow:0 4px 30px #0000aa22}
+.card-header{padding:14px 20px;border-bottom:1px solid #1e1e4a;display:flex;align-items:center;gap:10px}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.card-header h3{font-size:13px;font-weight:600;letter-spacing:.5px;color:#ccccee}
+.card img{width:100%;display:block}
+
+/* RESULT BADGES */
+.badge-W{background:#1a4a1a;color:#4caf50;border:1px solid #2e7d32}
+.badge-D{background:#2a2a1a;color:#ffc107;border:1px solid #f57f17}
+.badge-L{background:#4a1a1a;color:#ef5350;border:1px solid #b71c1c}
+.badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:1px}
+
+/* COMP PILL */
+.pill{display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600;letter-spacing:.5px}
+.pill-liga{background:#1a2a5a;color:#6699ff}
+.pill-ucl{background:#1a3a2a;color:#66cc88}
+.pill-copa{background:#3a1a3a;color:#cc66cc}
+.pill-supercopa{background:#3a2a1a;color:#ffaa44}
+
+/* TWO COL */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:900px){.two-col{grid-template-columns:1fr}}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+@media(max-width:1100px){.three-col{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.three-col{grid-template-columns:1fr}}
+
+/* SECTION */
+.section{padding:36px 28px;border-top:1px solid #1e1e4a}
+.sec-title{font-size:18px;font-weight:700;color:#ccccee;margin-bottom:6px}
+.sec-sub{font-size:12px;color:#8888bb;margin-bottom:22px}
+
+/* STAT BAR ROW */
+.stats-header{display:flex;justify-content:space-between;padding:0 0 14px;border-bottom:1px solid #1e1e4a;margin-bottom:14px}
+.stats-team-name{font-size:13px;font-weight:800;letter-spacing:.5px}
+.sr{display:grid;grid-template-columns:70px 1fr 70px;align-items:center;gap:10px;margin-bottom:11px}
+.sv{font-size:15px;font-weight:800;text-align:center;line-height:1}
+.sv.h{color:#004d98} .sv.a{color:#a50044;text-align:center}
+.sb-wrap{text-align:center}
+.sb{display:flex;height:6px;border-radius:4px;overflow:hidden;background:#1a1a3a;margin-bottom:5px}
+.bh{background:#004d98;transition:width .6s} .ba{background:#a50044;transition:width .6s}
+.sl{font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:#5555aa}
+
+/* TABS */
+.tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.tab{padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;
+  background:#111128;border:1px solid #1e1e4a;color:#9999cc;transition:all .2s}
+.tab.active,.tab:hover{background:#004d98;border-color:#004d98;color:#fff}
+
+/* FOOTER */
+.footer{text-align:center;padding:20px;font-size:11px;color:#333366;border-top:1px solid #1e1e4a}
+
+/* Force embedded Plotly charts to fill width.
+   The pitch itself stays proportional via the figure's yaxis scaleanchor,
+   so width:100% here only changes the surrounding green letterbox, not the
+   pitch shape. */
+.js-plotly-plot,.plot-container,.plotly{width:100%!important}
+.js-plotly-plot .main-svg{width:100%!important}
+
+
+/* INDEX SPECIFIC */
+.hero{background:linear-gradient(135deg,#08081a 0%,#0f0f2e 40%,#08081a 100%);
+  border-bottom:1px solid #1e1e4a;padding:48px 32px 36px;text-align:center}
+.hero-badge{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#6666aa;margin-bottom:16px}
+.hero-title{font-size:42px;font-weight:900;letter-spacing:-1.5px;margin-bottom:6px}
+.hero-title span{color:#f5c518}
+.hero-sub{font-size:14px;color:#6666aa}
+
+.record-bar{display:flex;justify-content:center;gap:32px;padding:24px 32px;
+  background:#080818;border-bottom:1px solid #1e1e4a;flex-wrap:wrap}
+.rec-item{text-align:center}
+.rec-val{font-size:28px;font-weight:900;color:#fff}
+.rec-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#555588;margin-top:2px}
+
+.matches-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;
+  padding:28px 28px;max-width:1400px;margin:0 auto}
+.match-card{transition:transform .15s,box-shadow .15s}
+.match-card:hover{transform:translateY(-2px);box-shadow:0 8px 40px #00008844}
+.match-card.hidden{display:none}
+
+.filter-bar{display:flex;gap:10px;padding:24px 28px 0;max-width:1400px;margin:0 auto;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo">BCN<span>Analytics</span></div>
+  <a href="index.html" class="active">Season</a>
+  <span style="color:#333355;font-size:18px">|</span>
+  <span style="font-size:12px;color:#555577">2025/26 · 50 matches</span>
+</nav>
+
+<div class="hero">
+  <div class="hero-badge">2025 / 26 Season Dashboard</div>
+  <div class="hero-title">FC <span>Barcelona</span></div>
+  <div class="hero-sub">La Liga · Copa del Rey · Champions League</div>
+</div>
+
+<div class="record-bar">
+  <div class="rec-item"><div class="rec-val" style="color:#4caf50">38</div><div class="rec-lbl">Wins</div></div>
+  <div class="rec-item"><div class="rec-val" style="color:#ffc107">3</div><div class="rec-lbl">Draws</div></div>
+  <div class="rec-item"><div class="rec-val" style="color:#ef5350">9</div><div class="rec-lbl">Losses</div></div>
+  <div class="rec-item" style="border-left:1px solid #1e1e4a;padding-left:32px">
+    <div class="rec-val">127</div><div class="rec-lbl">Goals For</div></div>
+  <div class="rec-item"><div class="rec-val">56</div><div class="rec-lbl">Goals Against</div></div>
+  <div class="rec-item" style="border-left:1px solid #1e1e4a;padding-left:32px">
+    <div class="rec-val" style="color:#f5c518">2.7</div><div class="rec-lbl">Avg xG/game</div></div>
+  <div class="rec-item"><div class="rec-val">50</div><div class="rec-lbl">Matches</div></div>
+</div>
+
+<div class="filter-bar">
+  <button class="tab active" onclick="filter('all')">All (50)</button>
+  <button class="tab" onclick="filter('La Liga')">La Liga (35)</button>
+  <button class="tab" onclick="filter('UCL')">Champions League (9)</button>
+  <button class="tab" onclick="filter('Copa')">Copa del Rey (4)</button>
+  <button class="tab" onclick="filter('Supercopa')">Supercopa (2)</button>
+</div>
+
+<div class="matches-grid" id="grid">
+
+<a href="match_1913918.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-08-16</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Mallorca</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">0 – 3</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 0.53 – 2.02</span>
+      <span style="color:#555588">Estadi Mallorca Son Moix</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1913888.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-08-23</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Levante</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">2 – 3</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.69 – 2.48</span>
+      <span style="color:#555588">Ciutat de Valencia</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1913904.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-08-31</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-D">D</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Rayo Vallecano</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #ffc10755">1 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.87 – 2.36</span>
+      <span style="color:#555588">Estadio de Vallecas</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1913922.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-09-14</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">6 – 0</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Valencia</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 3.46 – 0.12</span>
+      <span style="color:#555588">Estadi Johan Cruyff</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1946405.html" class="match-card card" data-comp="UCL">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-09-18</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-ucl">UCL</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Newcastle</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">1 – 2</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.67 – 1.67</span>
+      <span style="color:#555588">St. James' Park</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1913903.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-09-21</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">3 – 0</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Getafe</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.96 – 0.22</span>
+      <span style="color:#555588">Estadi Johan Cruyff</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1913936.html" class="match-card card" data-comp="Copa">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-09-25</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-copa">Copa del Rey</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Real Oviedo</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">1 – 3</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.45 – 2.07</span>
+      <span style="color:#555588">Carlos Tartiere</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1913949.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-09-28</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">2 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Real Sociedad</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 3.01 – 0.96</span>
+      <span style="color:#555588">Estadi Olímpic Lluís Companys</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1946390.html" class="match-card card" data-comp="UCL">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-10-01</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-ucl">UCL</span>
+        <span class="badge badge-L">L</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #ef535055">1 – 2</span>
+      <span style="font-size:14px;flex:1;text-align:right;">PSG</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.86 – 2.62</span>
+      <span style="color:#555588">Estadi Olímpic Lluís Companys</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1913956.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-10-05</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-L">L</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Sevilla</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #ef535055">4 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.89 – 2.48</span>
+      <span style="color:#555588">Ramón Sánchez-Pizjuán</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1913969.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-10-18</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">2 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Girona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.42 – 1.69</span>
+      <span style="color:#555588">Estadi Olímpic Lluís Companys</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1946395.html" class="match-card card" data-comp="UCL">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-10-21</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-ucl">UCL</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">6 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Olympiacos</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 3.41 – 1.02</span>
+      <span style="color:#555588">Estadi Olímpic Lluís Companys</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1913998.html" class="match-card card" data-comp="UCL">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-10-26</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-ucl">UCL</span>
+        <span class="badge badge-L">L</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Real Madrid</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #ef535055">2 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 3.41 – 1.12</span>
+      <span style="color:#555588">Santiago Bernabéu</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1913963.html" class="match-card card" data-comp="Copa">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-11-02</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-copa">Copa del Rey</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">3 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Elche</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.81 – 0.55</span>
+      <span style="color:#555588">Estadi Olímpic Lluís Companys</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1946393.html" class="match-card card" data-comp="UCL">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-11-05</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-ucl">UCL</span>
+        <span class="badge badge-D">D</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Club Brugge</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #ffc10755">3 – 3</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.61 – 2.77</span>
+      <span style="color:#555588">Jan Breydelstadion</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1913991.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-11-09</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Celta Vigo</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">2 – 4</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 0.51 – 3.43</span>
+      <span style="color:#555588">Estadio Abanca-Balaídos</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914008.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-11-22</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">4 – 0</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Athletic Club</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.33 – 1.05</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1946348.html" class="match-card card" data-comp="UCL">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-11-25</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-ucl">UCL</span>
+        <span class="badge badge-L">L</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Chelsea</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #ef535055">3 – 0</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.86 – 0.77</span>
+      <span style="color:#555588">Stamford Bridge</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914018.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-11-29</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">3 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Deportivo Alaves</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.51 – 2.09</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914066.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-12-02</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">3 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Atletico</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 3.46 – 1.35</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914026.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-12-06</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Real Betis</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">3 – 5</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.74 – 3.30</span>
+      <span style="color:#555588">Estadio La Cartuja de Sevilla</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1946392.html" class="match-card card" data-comp="UCL">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-12-09</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-ucl">UCL</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">2 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Eintracht Frankfurt</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.10 – 0.96</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914034.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-12-13</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">2 – 0</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Osasuna</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.14 – 0.23</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914049.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2025-12-21</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Villarreal</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">0 – 2</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.16 – 3.27</span>
+      <span style="color:#555588">Estadio de la Cerámica</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914057.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-01-03</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Espanyol</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">0 – 2</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.80 – 2.94</span>
+      <span style="color:#555588">RCDE Stadium</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914077.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-01-18</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-L">L</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Real Sociedad</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #ef535055">2 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.56 – 3.92</span>
+      <span style="color:#555588">Estadio Municipal de Anoeta</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1946401.html" class="match-card card" data-comp="UCL">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-01-21</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-ucl">UCL</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Slavia Prague</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">2 – 4</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.45 – 2.21</span>
+      <span style="color:#555588">Fortuna Arena</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914086.html" class="match-card card" data-comp="Copa">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-01-25</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-copa">Copa del Rey</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">3 – 0</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Real Oviedo</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.60 – 0.49</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1946403.html" class="match-card card" data-comp="UCL">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-01-28</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-ucl">UCL</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">4 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Copenhagen</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 4.36 – 0.49</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914083.html" class="match-card card" data-comp="Copa">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-01-31</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-copa">Copa del Rey</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Elche</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">1 – 3</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 0.84 – 7.11</span>
+      <span style="color:#555588">Martínez Valero</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914158.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-02-07</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">3 – 0</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Mallorca</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.48 – 1.01</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914105.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-02-16</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-L">L</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Girona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #ef535055">2 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.89 – 2.70</span>
+      <span style="color:#555588">Municipal de Montilivi</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914123.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-02-22</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">3 – 0</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Levante</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 5.06 – 0.71</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914135.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-02-28</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">4 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Villarreal</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 3.49 – 1.80</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914145.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-03-07</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Athletic Club</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">0 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.84 – 0.66</span>
+      <span style="color:#555588">San Mamés</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1972181.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-03-10</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-D">D</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Newcastle</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #ffc10755">1 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.60 – 1.79</span>
+      <span style="color:#555588">St. James' Park</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914120.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-03-15</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">5 – 2</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Sevilla</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 4.07 – 1.25</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1972185.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-03-18</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">7 – 2</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Newcastle</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 5.86 – 1.53</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914165.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-03-22</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">1 – 0</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Rayo Vallecano</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.12 – 2.44</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914171.html" class="match-card card" data-comp="Supercopa">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-04-04</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-supercopa">Supercopa</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Atletico</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">1 – 2</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.21 – 3.51</span>
+      <span style="color:#555588">Riyadh Air Metropolitano</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1974943.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-04-08</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-L">L</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #ef535055">0 – 2</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Atletico</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.47 – 0.94</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914200.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-04-11</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">4 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Espanyol</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 3.11 – 1.55</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1974944.html" class="match-card card" data-comp="Supercopa">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-04-14</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-supercopa">Supercopa</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Atletico</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">1 – 2</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 2.51 – 3.17</span>
+      <span style="color:#555588">Riyadh Air Metropolitano</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914216.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-04-22</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">1 – 0</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Celta Vigo</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.41 – 1.03</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914207.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-04-25</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Getafe</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">0 – 2</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 0.85 – 2.29</span>
+      <span style="color:#555588">Estadio Coliseum</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914184.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-05-02</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Osasuna</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">1 – 2</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.82 – 2.03</span>
+      <span style="color:#555588">El Sadar</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914198.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-05-10</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">2 – 0</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Real Madrid</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.90 – 1.00</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914217.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-05-13</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-L">L</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Deportivo Alaves</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #ef535055">1 – 0</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.58 – 0.55</span>
+      <span style="color:#555588">Mendizorroza</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914241.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-05-17</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-W">W</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;color:#004d98;font-weight:700">Barcelona</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #4caf5055">3 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;">Real Betis</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.49 – 0.96</span>
+      <span style="color:#555588">Spotify Camp Nou</span>
+    </div>
+  </div>
+</a>
+
+<a href="match_1914258.html" class="match-card card" data-comp="La Liga">
+  <div style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#666699">2026-05-23</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="pill pill-liga">La Liga</span>
+        <span class="badge badge-L">L</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:14px;flex:1;">Valencia</span>
+      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
+        text-shadow:0 0 20px #ef535055">3 – 1</span>
+      <span style="font-size:14px;flex:1;text-align:right;color:#004d98;font-weight:700">Barcelona</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
+      <span>xG 1.56 – 2.53</span>
+      <span style="color:#555588">Mestalla</span>
+    </div>
+  </div>
+</a>
+</div>
+
+<div class="footer">BCNProject Analytics · WhoScored + Understat data · 2025/26</div>
+
+<script>
+function filter(comp) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.querySelectorAll('.match-card').forEach(c => {
+    if (comp === 'all' || c.dataset.comp === comp) c.classList.remove('hidden');
+    else c.classList.add('hidden');
+  });
+}
+</script>
+</body>
+</html>

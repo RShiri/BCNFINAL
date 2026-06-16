@@ -1,0 +1,74 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+body{margin:0;background:#0d0d1a;color:#e0e0e0;font-family:system-ui}
+.ctrl-1972181_away_drib{display:flex;gap:12px;align-items:center;padding:10px 16px;background:#111128;flex-wrap:wrap}
+.ctrl-1972181_away_drib label{font-size:11px;color:#8888bb;letter-spacing:1px;text-transform:uppercase}
+.ctrl-1972181_away_drib select{background:#0d0d1a;color:#e0e0e0;border:1px solid #4444aa;border-radius:6px;padding:5px 10px;font-size:12px}
+#chart_1972181_away_drib{width:100%;height:520px}
+</style></head><body>
+<div class="ctrl-1972181_away_drib">
+  <label>Player:</label>
+  <select id="psel_1972181_away_drib" onchange="window.redraw_1972181_away_drib()">
+    <option value="all">All Players</option>
+    <option value="Araujo">Araujo</option><option value="Cancelo">Cancelo</option><option value="López">López</option><option value="Olmo">Olmo</option><option value="Pedri">Pedri</option><option value="Raphinha">Raphinha</option><option value="Yamal">Yamal</option>
+  </select>
+  <label style="margin-left:12px">Outcome:</label>
+  <select id="osel_1972181_away_drib" onchange="window.redraw_1972181_away_drib()">
+    <option value="all">All</option>
+    <option value="Successful">Successful</option>
+    <option value="Unsuccessful">Unsuccessful</option>
+  </select>
+  <span id="summary_1972181_away_drib" style="margin-left:auto;font-size:12px;color:#9999cc"></span>
+</div>
+<div id="chart_1972181_away_drib"></div>
+<script>
+(function(){
+  var data = [{"x": 32.64, "y": 22.07999999999999, "player": "Pedri", "outcome": "Unsuccessful", "minute": 1}, {"x": 115.32, "y": 57.599999999999994, "player": "Yamal", "outcome": "Unsuccessful", "minute": 13}, {"x": 40.559999999999995, "y": 76.8, "player": "Araujo", "outcome": "Successful", "minute": 30}, {"x": 68.04, "y": 6.0, "player": "Raphinha", "outcome": "Successful", "minute": 31}, {"x": 65.39999999999999, "y": 20.96, "player": "Raphinha", "outcome": "Successful", "minute": 31}, {"x": 41.16, "y": 53.92, "player": "Raphinha", "outcome": "Unsuccessful", "minute": 33}, {"x": 58.32, "y": 32.63999999999999, "player": "L\u00f3pez", "outcome": "Unsuccessful", "minute": 34}, {"x": 66.36, "y": 7.920000000000002, "player": "Raphinha", "outcome": "Successful", "minute": 45}, {"x": 98.88000000000001, "y": 13.120000000000005, "player": "Cancelo", "outcome": "Unsuccessful", "minute": 50}, {"x": 80.64, "y": 25.439999999999998, "player": "Cancelo", "outcome": "Unsuccessful", "minute": 54}, {"x": 43.68, "y": 10.0, "player": "L\u00f3pez", "outcome": "Successful", "minute": 58}, {"x": 46.08, "y": 3.519999999999996, "player": "Cancelo", "outcome": "Unsuccessful", "minute": 62}, {"x": 27.96, "y": 13.120000000000005, "player": "Olmo", "outcome": "Unsuccessful", "minute": 69}, {"x": 41.279999999999994, "y": 3.279999999999987, "player": "Cancelo", "outcome": "Successful", "minute": 71}, {"x": 81.0, "y": 59.68, "player": "Yamal", "outcome": "Unsuccessful", "minute": 92}, {"x": 88.2, "y": 5.439999999999998, "player": "Cancelo", "outcome": "Successful", "minute": 94}, {"x": 84.6, "y": 15.279999999999987, "player": "Cancelo", "outcome": "Successful", "minute": 94}, {"x": 105.24, "y": 35.519999999999996, "player": "Olmo", "outcome": "Unsuccessful", "minute": 94}];
+  var shapes = [{"type": "rect", "x0": 0, "y0": 0, "x1": 120, "y1": 80, "line": {"color": "white", "width": 2}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "line", "x0": 60, "y0": 0, "x1": 60, "y1": 80, "line": {"color": "white", "width": 1.5}}, {"type": "circle", "x0": 51, "y0": 31, "x1": 69, "y1": 49, "line": {"color": "white", "width": 1.5}}, {"type": "rect", "x0": 0, "y0": 18, "x1": 18, "y1": 62, "line": {"color": "white", "width": 1.5}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 0, "y0": 30, "x1": 6, "y1": 50, "line": {"color": "white", "width": 1}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 102, "y0": 18, "x1": 120, "y1": 62, "line": {"color": "white", "width": 1.5}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 114, "y0": 30, "x1": 120, "y1": 50, "line": {"color": "white", "width": 1}, "fillcolor": "rgba(0,0,0,0)"}];
+
+  window.redraw_1972181_away_drib = function() {
+    var p = document.getElementById("psel_1972181_away_drib").value;
+    var o = document.getElementById("osel_1972181_away_drib").value;
+    var filtered = data.filter(function(d){
+      return (p==="all" || d.player===p) && (o==="all" || d.outcome===o);
+    });
+    var succ = filtered.filter(function(d){return d.outcome==="Successful";});
+    var fail = filtered.filter(function(d){return d.outcome==="Unsuccessful";});
+    document.getElementById("summary_1972181_away_drib").textContent =
+      succ.length+" successful · "+fail.length+" unsuccessful";
+
+    var traces = [
+      {
+        x: succ.map(function(d){return d.x;}), y: succ.map(function(d){return d.y;}),
+        mode:"markers", name:"Successful",
+        marker:{size:12, color:"#2ca02c", symbol:"circle", line:{width:1.5, color:"white"}},
+        hovertext: succ.map(function(d){return "<b>"+d.player+"</b> ("+d.minute+"')<br>Successful Take-On";}),
+        hoverinfo:"text"
+      },
+      {
+        x: fail.map(function(d){return d.x;}), y: fail.map(function(d){return d.y;}),
+        mode:"markers", name:"Unsuccessful",
+        marker:{size:12, color:"#d62728", symbol:"x", line:{width:2, color:"#ff6666"}},
+        hovertext: fail.map(function(d){return "<b>"+d.player+"</b> ("+d.minute+"')<br>Unsuccessful Take-On";}),
+        hoverinfo:"text"
+      }
+    ];
+
+    var layout = {
+      paper_bgcolor:"#0d0d1a", plot_bgcolor:"#2d572c",
+      font:{color:"white"},
+      shapes: shapes,
+      xaxis:{range:[-2,122], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
+      yaxis:{range:[-2,82], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
+      showlegend:true,
+      legend:{x:0.5, y:-0.04, xanchor:"center", orientation:"h", font:{color:"white",size:12}, bgcolor:"rgba(0,0,0,0)"},
+      margin:{l:10,r:10,t:14,b:10},
+    };
+
+    Plotly.newPlot("chart_1972181_away_drib", traces, layout, {responsive:true, displayModeBar:false});
+  };
+
+  window.redraw_1972181_away_drib();
+})();
+</script></body></html>

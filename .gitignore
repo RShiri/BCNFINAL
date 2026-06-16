@@ -1,0 +1,15 @@
+# ignore all .idea files
+.idea/*
+.ipynb_checkpoints/*
+*/.ipynb_checkpoints/*
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS files
+.DS_Store
+Thumbs.db
+
+```

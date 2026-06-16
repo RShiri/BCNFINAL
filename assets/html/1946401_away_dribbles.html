@@ -1,0 +1,74 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+body{margin:0;background:#0d0d1a;color:#e0e0e0;font-family:system-ui}
+.ctrl-1946401_away_drib{display:flex;gap:12px;align-items:center;padding:10px 16px;background:#111128;flex-wrap:wrap}
+.ctrl-1946401_away_drib label{font-size:11px;color:#8888bb;letter-spacing:1px;text-transform:uppercase}
+.ctrl-1946401_away_drib select{background:#0d0d1a;color:#e0e0e0;border:1px solid #4444aa;border-radius:6px;padding:5px 10px;font-size:12px}
+#chart_1946401_away_drib{width:100%;height:520px}
+</style></head><body>
+<div class="ctrl-1946401_away_drib">
+  <label>Player:</label>
+  <select id="psel_1946401_away_drib" onchange="window.redraw_1946401_away_drib()">
+    <option value="all">All Players</option>
+    <option value="Balde">Balde</option><option value="Bardghji">Bardghji</option><option value="García">García</option><option value="Jong">Jong</option><option value="Koundé">Koundé</option><option value="Lewandowski">Lewandowski</option><option value="López">López</option><option value="Pedri">Pedri</option><option value="Raphinha">Raphinha</option><option value="Rashford">Rashford</option>
+  </select>
+  <label style="margin-left:12px">Outcome:</label>
+  <select id="osel_1946401_away_drib" onchange="window.redraw_1946401_away_drib()">
+    <option value="all">All</option>
+    <option value="Successful">Successful</option>
+    <option value="Unsuccessful">Unsuccessful</option>
+  </select>
+  <span id="summary_1946401_away_drib" style="margin-left:auto;font-size:12px;color:#9999cc"></span>
+</div>
+<div id="chart_1946401_away_drib"></div>
+<script>
+(function(){
+  var data = [{"x": 45.72, "y": 72.4, "player": "Kound\u00e9", "outcome": "Successful", "minute": 0}, {"x": 75.0, "y": 4.959999999999994, "player": "Balde", "outcome": "Successful", "minute": 4}, {"x": 87.11999999999999, "y": 34.239999999999995, "player": "Lewandowski", "outcome": "Unsuccessful", "minute": 4}, {"x": 39.84, "y": 4.159999999999997, "player": "Balde", "outcome": "Successful", "minute": 18}, {"x": 48.84, "y": 6.3999999999999915, "player": "Pedri", "outcome": "Unsuccessful", "minute": 19}, {"x": 48.35999999999999, "y": 5.439999999999998, "player": "Pedri", "outcome": "Unsuccessful", "minute": 19}, {"x": 43.92, "y": 15.679999999999993, "player": "Pedri", "outcome": "Unsuccessful", "minute": 20}, {"x": 84.71999999999998, "y": 34.56, "player": "L\u00f3pez", "outcome": "Unsuccessful", "minute": 22}, {"x": 109.44, "y": 68.16, "player": "Kound\u00e9", "outcome": "Unsuccessful", "minute": 25}, {"x": 111.0, "y": 10.239999999999995, "player": "Balde", "outcome": "Unsuccessful", "minute": 26}, {"x": 53.04, "y": 45.919999999999995, "player": "Bardghji", "outcome": "Unsuccessful", "minute": 27}, {"x": 85.44, "y": 59.68, "player": "Bardghji", "outcome": "Unsuccessful", "minute": 30}, {"x": 83.52, "y": 40.8, "player": "Pedri", "outcome": "Unsuccessful", "minute": 31}, {"x": 87.11999999999999, "y": 52.8, "player": "Garc\u00eda", "outcome": "Successful", "minute": 31}, {"x": 73.8, "y": 5.1200000000000045, "player": "Raphinha", "outcome": "Unsuccessful", "minute": 37}, {"x": 84.96, "y": 74.56, "player": "Bardghji", "outcome": "Successful", "minute": 54}, {"x": 63.84, "y": 66.88, "player": "Kound\u00e9", "outcome": "Successful", "minute": 71}, {"x": 64.8, "y": 66.96, "player": "Kound\u00e9", "outcome": "Unsuccessful", "minute": 71}, {"x": 71.39999999999999, "y": 6.079999999999998, "player": "Rashford", "outcome": "Successful", "minute": 74}, {"x": 54.0, "y": 3.039999999999992, "player": "Lewandowski", "outcome": "Unsuccessful", "minute": 84}, {"x": 116.16, "y": 53.12, "player": "Lewandowski", "outcome": "Successful", "minute": 88}, {"x": 35.76, "y": 57.76, "player": "Jong", "outcome": "Successful", "minute": 92}];
+  var shapes = [{"type": "rect", "x0": 0, "y0": 0, "x1": 120, "y1": 80, "line": {"color": "white", "width": 2}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "line", "x0": 60, "y0": 0, "x1": 60, "y1": 80, "line": {"color": "white", "width": 1.5}}, {"type": "circle", "x0": 51, "y0": 31, "x1": 69, "y1": 49, "line": {"color": "white", "width": 1.5}}, {"type": "rect", "x0": 0, "y0": 18, "x1": 18, "y1": 62, "line": {"color": "white", "width": 1.5}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 0, "y0": 30, "x1": 6, "y1": 50, "line": {"color": "white", "width": 1}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 102, "y0": 18, "x1": 120, "y1": 62, "line": {"color": "white", "width": 1.5}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 114, "y0": 30, "x1": 120, "y1": 50, "line": {"color": "white", "width": 1}, "fillcolor": "rgba(0,0,0,0)"}];
+
+  window.redraw_1946401_away_drib = function() {
+    var p = document.getElementById("psel_1946401_away_drib").value;
+    var o = document.getElementById("osel_1946401_away_drib").value;
+    var filtered = data.filter(function(d){
+      return (p==="all" || d.player===p) && (o==="all" || d.outcome===o);
+    });
+    var succ = filtered.filter(function(d){return d.outcome==="Successful";});
+    var fail = filtered.filter(function(d){return d.outcome==="Unsuccessful";});
+    document.getElementById("summary_1946401_away_drib").textContent =
+      succ.length+" successful · "+fail.length+" unsuccessful";
+
+    var traces = [
+      {
+        x: succ.map(function(d){return d.x;}), y: succ.map(function(d){return d.y;}),
+        mode:"markers", name:"Successful",
+        marker:{size:12, color:"#2ca02c", symbol:"circle", line:{width:1.5, color:"white"}},
+        hovertext: succ.map(function(d){return "<b>"+d.player+"</b> ("+d.minute+"')<br>Successful Take-On";}),
+        hoverinfo:"text"
+      },
+      {
+        x: fail.map(function(d){return d.x;}), y: fail.map(function(d){return d.y;}),
+        mode:"markers", name:"Unsuccessful",
+        marker:{size:12, color:"#d62728", symbol:"x", line:{width:2, color:"#ff6666"}},
+        hovertext: fail.map(function(d){return "<b>"+d.player+"</b> ("+d.minute+"')<br>Unsuccessful Take-On";}),
+        hoverinfo:"text"
+      }
+    ];
+
+    var layout = {
+      paper_bgcolor:"#0d0d1a", plot_bgcolor:"#2d572c",
+      font:{color:"white"},
+      shapes: shapes,
+      xaxis:{range:[-2,122], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
+      yaxis:{range:[-2,82], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
+      showlegend:true,
+      legend:{x:0.5, y:-0.04, xanchor:"center", orientation:"h", font:{color:"white",size:12}, bgcolor:"rgba(0,0,0,0)"},
+      margin:{l:10,r:10,t:14,b:10},
+    };
+
+    Plotly.newPlot("chart_1946401_away_drib", traces, layout, {responsive:true, displayModeBar:false});
+  };
+
+  window.redraw_1946401_away_drib();
+})();
+</script></body></html>

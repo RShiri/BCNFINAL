@@ -1,0 +1,74 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+body{margin:0;background:#0d0d1a;color:#e0e0e0;font-family:system-ui}
+.ctrl-1913922_away_drib{display:flex;gap:12px;align-items:center;padding:10px 16px;background:#111128;flex-wrap:wrap}
+.ctrl-1913922_away_drib label{font-size:11px;color:#8888bb;letter-spacing:1px;text-transform:uppercase}
+.ctrl-1913922_away_drib select{background:#0d0d1a;color:#e0e0e0;border:1px solid #4444aa;border-radius:6px;padding:5px 10px;font-size:12px}
+#chart_1913922_away_drib{width:100%;height:520px}
+</style></head><body>
+<div class="ctrl-1913922_away_drib">
+  <label>Player:</label>
+  <select id="psel_1913922_away_drib" onchange="window.redraw_1913922_away_drib()">
+    <option value="all">All Players</option>
+    <option value="Danjuma">Danjuma</option><option value="Duro">Duro</option><option value="Foulquier">Foulquier</option><option value="Guerra">Guerra</option><option value="López">López</option><option value="Ramazani">Ramazani</option><option value="Rioja">Rioja</option><option value="Santamaría">Santamaría</option>
+  </select>
+  <label style="margin-left:12px">Outcome:</label>
+  <select id="osel_1913922_away_drib" onchange="window.redraw_1913922_away_drib()">
+    <option value="all">All</option>
+    <option value="Successful">Successful</option>
+    <option value="Unsuccessful">Unsuccessful</option>
+  </select>
+  <span id="summary_1913922_away_drib" style="margin-left:auto;font-size:12px;color:#9999cc"></span>
+</div>
+<div id="chart_1913922_away_drib"></div>
+<script>
+(function(){
+  var data = [{"x": 50.16, "y": 61.12, "player": "L\u00f3pez", "outcome": "Unsuccessful", "minute": 0}, {"x": 78.84, "y": 61.519999999999996, "player": "L\u00f3pez", "outcome": "Unsuccessful", "minute": 6}, {"x": 59.16, "y": 74.88, "player": "L\u00f3pez", "outcome": "Unsuccessful", "minute": 20}, {"x": 114.96, "y": 64.48, "player": "Guerra", "outcome": "Unsuccessful", "minute": 29}, {"x": 97.68, "y": 65.92, "player": "Danjuma", "outcome": "Unsuccessful", "minute": 30}, {"x": 90.0, "y": 8.47999999999999, "player": "Santamar\u00eda", "outcome": "Unsuccessful", "minute": 33}, {"x": 74.39999999999999, "y": 74.88, "player": "Duro", "outcome": "Unsuccessful", "minute": 58}, {"x": 104.16, "y": 56.31999999999999, "player": "Ramazani", "outcome": "Unsuccessful", "minute": 59}, {"x": 87.48, "y": 70.24, "player": "Ramazani", "outcome": "Unsuccessful", "minute": 67}, {"x": 39.84, "y": 21.120000000000005, "player": "Santamar\u00eda", "outcome": "Unsuccessful", "minute": 71}, {"x": 73.08, "y": 10.239999999999995, "player": "Rioja", "outcome": "Successful", "minute": 84}, {"x": 74.39999999999999, "y": 16.0, "player": "Rioja", "outcome": "Unsuccessful", "minute": 84}, {"x": 17.16, "y": 69.6, "player": "Foulquier", "outcome": "Successful", "minute": 84}];
+  var shapes = [{"type": "rect", "x0": 0, "y0": 0, "x1": 120, "y1": 80, "line": {"color": "white", "width": 2}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "line", "x0": 60, "y0": 0, "x1": 60, "y1": 80, "line": {"color": "white", "width": 1.5}}, {"type": "circle", "x0": 51, "y0": 31, "x1": 69, "y1": 49, "line": {"color": "white", "width": 1.5}}, {"type": "rect", "x0": 0, "y0": 18, "x1": 18, "y1": 62, "line": {"color": "white", "width": 1.5}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 0, "y0": 30, "x1": 6, "y1": 50, "line": {"color": "white", "width": 1}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 102, "y0": 18, "x1": 120, "y1": 62, "line": {"color": "white", "width": 1.5}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 114, "y0": 30, "x1": 120, "y1": 50, "line": {"color": "white", "width": 1}, "fillcolor": "rgba(0,0,0,0)"}];
+
+  window.redraw_1913922_away_drib = function() {
+    var p = document.getElementById("psel_1913922_away_drib").value;
+    var o = document.getElementById("osel_1913922_away_drib").value;
+    var filtered = data.filter(function(d){
+      return (p==="all" || d.player===p) && (o==="all" || d.outcome===o);
+    });
+    var succ = filtered.filter(function(d){return d.outcome==="Successful";});
+    var fail = filtered.filter(function(d){return d.outcome==="Unsuccessful";});
+    document.getElementById("summary_1913922_away_drib").textContent =
+      succ.length+" successful · "+fail.length+" unsuccessful";
+
+    var traces = [
+      {
+        x: succ.map(function(d){return d.x;}), y: succ.map(function(d){return d.y;}),
+        mode:"markers", name:"Successful",
+        marker:{size:12, color:"#2ca02c", symbol:"circle", line:{width:1.5, color:"white"}},
+        hovertext: succ.map(function(d){return "<b>"+d.player+"</b> ("+d.minute+"')<br>Successful Take-On";}),
+        hoverinfo:"text"
+      },
+      {
+        x: fail.map(function(d){return d.x;}), y: fail.map(function(d){return d.y;}),
+        mode:"markers", name:"Unsuccessful",
+        marker:{size:12, color:"#d62728", symbol:"x", line:{width:2, color:"#ff6666"}},
+        hovertext: fail.map(function(d){return "<b>"+d.player+"</b> ("+d.minute+"')<br>Unsuccessful Take-On";}),
+        hoverinfo:"text"
+      }
+    ];
+
+    var layout = {
+      paper_bgcolor:"#0d0d1a", plot_bgcolor:"#2d572c",
+      font:{color:"white"},
+      shapes: shapes,
+      xaxis:{range:[-2,122], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
+      yaxis:{range:[-2,82], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
+      showlegend:true,
+      legend:{x:0.5, y:-0.04, xanchor:"center", orientation:"h", font:{color:"white",size:12}, bgcolor:"rgba(0,0,0,0)"},
+      margin:{l:10,r:10,t:14,b:10},
+    };
+
+    Plotly.newPlot("chart_1913922_away_drib", traces, layout, {responsive:true, displayModeBar:false});
+  };
+
+  window.redraw_1913922_away_drib();
+})();
+</script></body></html>

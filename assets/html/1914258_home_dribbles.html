@@ -1,0 +1,74 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+body{margin:0;background:#0d0d1a;color:#e0e0e0;font-family:system-ui}
+.ctrl-1914258_home_drib{display:flex;gap:12px;align-items:center;padding:10px 16px;background:#111128;flex-wrap:wrap}
+.ctrl-1914258_home_drib label{font-size:11px;color:#8888bb;letter-spacing:1px;text-transform:uppercase}
+.ctrl-1914258_home_drib select{background:#0d0d1a;color:#e0e0e0;border:1px solid #4444aa;border-radius:6px;padding:5px 10px;font-size:12px}
+#chart_1914258_home_drib{width:100%;height:520px}
+</style></head><body>
+<div class="ctrl-1914258_home_drib">
+  <label>Player:</label>
+  <select id="psel_1914258_home_drib" onchange="window.redraw_1914258_home_drib()">
+    <option value="all">All Players</option>
+    <option value="Duro">Duro</option><option value="Guerra">Guerra</option><option value="Ramazani">Ramazani</option><option value="Rioja">Rioja</option><option value="Rodríguez">Rodríguez</option><option value="Sadiq">Sadiq</option><option value="Ugrinic">Ugrinic</option><option value="Vázquez">Vázquez</option>
+  </select>
+  <label style="margin-left:12px">Outcome:</label>
+  <select id="osel_1914258_home_drib" onchange="window.redraw_1914258_home_drib()">
+    <option value="all">All</option>
+    <option value="Successful">Successful</option>
+    <option value="Unsuccessful">Unsuccessful</option>
+  </select>
+  <span id="summary_1914258_home_drib" style="margin-left:auto;font-size:12px;color:#9999cc"></span>
+</div>
+<div id="chart_1914258_home_drib"></div>
+<script>
+(function(){
+  var data = [{"x": 77.16, "y": 63.599999999999994, "player": "Ugrinic", "outcome": "Successful", "minute": 5}, {"x": 45.6, "y": 58.56, "player": "Rodr\u00edguez", "outcome": "Successful", "minute": 10}, {"x": 45.35999999999999, "y": 74.24, "player": "Guerra", "outcome": "Unsuccessful", "minute": 16}, {"x": 64.08, "y": 69.52, "player": "Rioja", "outcome": "Unsuccessful", "minute": 34}, {"x": 89.88000000000001, "y": 63.68, "player": "Guerra", "outcome": "Successful", "minute": 37}, {"x": 55.199999999999996, "y": 18.47999999999999, "player": "V\u00e1zquez", "outcome": "Unsuccessful", "minute": 40}, {"x": 112.55999999999999, "y": 24.96, "player": "V\u00e1zquez", "outcome": "Unsuccessful", "minute": 48}, {"x": 73.92, "y": 77.76, "player": "Duro", "outcome": "Unsuccessful", "minute": 48}, {"x": 111.6, "y": 13.439999999999998, "player": "Guerra", "outcome": "Successful", "minute": 49}, {"x": 87.6, "y": 24.32, "player": "Guerra", "outcome": "Unsuccessful", "minute": 53}, {"x": 94.68, "y": 3.5999999999999943, "player": "Ramazani", "outcome": "Unsuccessful", "minute": 55}, {"x": 72.0, "y": 31.519999999999996, "player": "Guerra", "outcome": "Successful", "minute": 68}, {"x": 59.75999999999999, "y": 14.799999999999997, "player": "Ramazani", "outcome": "Successful", "minute": 70}, {"x": 105.24, "y": 28.0, "player": "Guerra", "outcome": "Unsuccessful", "minute": 89}, {"x": 58.32, "y": 38.08, "player": "Sadiq", "outcome": "Successful", "minute": 95}, {"x": 101.64, "y": 4.159999999999997, "player": "Rioja", "outcome": "Successful", "minute": 96}];
+  var shapes = [{"type": "rect", "x0": 0, "y0": 0, "x1": 120, "y1": 80, "line": {"color": "white", "width": 2}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "line", "x0": 60, "y0": 0, "x1": 60, "y1": 80, "line": {"color": "white", "width": 1.5}}, {"type": "circle", "x0": 51, "y0": 31, "x1": 69, "y1": 49, "line": {"color": "white", "width": 1.5}}, {"type": "rect", "x0": 0, "y0": 18, "x1": 18, "y1": 62, "line": {"color": "white", "width": 1.5}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 0, "y0": 30, "x1": 6, "y1": 50, "line": {"color": "white", "width": 1}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 102, "y0": 18, "x1": 120, "y1": 62, "line": {"color": "white", "width": 1.5}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 114, "y0": 30, "x1": 120, "y1": 50, "line": {"color": "white", "width": 1}, "fillcolor": "rgba(0,0,0,0)"}];
+
+  window.redraw_1914258_home_drib = function() {
+    var p = document.getElementById("psel_1914258_home_drib").value;
+    var o = document.getElementById("osel_1914258_home_drib").value;
+    var filtered = data.filter(function(d){
+      return (p==="all" || d.player===p) && (o==="all" || d.outcome===o);
+    });
+    var succ = filtered.filter(function(d){return d.outcome==="Successful";});
+    var fail = filtered.filter(function(d){return d.outcome==="Unsuccessful";});
+    document.getElementById("summary_1914258_home_drib").textContent =
+      succ.length+" successful · "+fail.length+" unsuccessful";
+
+    var traces = [
+      {
+        x: succ.map(function(d){return d.x;}), y: succ.map(function(d){return d.y;}),
+        mode:"markers", name:"Successful",
+        marker:{size:12, color:"#2ca02c", symbol:"circle", line:{width:1.5, color:"white"}},
+        hovertext: succ.map(function(d){return "<b>"+d.player+"</b> ("+d.minute+"')<br>Successful Take-On";}),
+        hoverinfo:"text"
+      },
+      {
+        x: fail.map(function(d){return d.x;}), y: fail.map(function(d){return d.y;}),
+        mode:"markers", name:"Unsuccessful",
+        marker:{size:12, color:"#d62728", symbol:"x", line:{width:2, color:"#ff6666"}},
+        hovertext: fail.map(function(d){return "<b>"+d.player+"</b> ("+d.minute+"')<br>Unsuccessful Take-On";}),
+        hoverinfo:"text"
+      }
+    ];
+
+    var layout = {
+      paper_bgcolor:"#0d0d1a", plot_bgcolor:"#2d572c",
+      font:{color:"white"},
+      shapes: shapes,
+      xaxis:{range:[-2,122], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
+      yaxis:{range:[-2,82], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
+      showlegend:true,
+      legend:{x:0.5, y:-0.04, xanchor:"center", orientation:"h", font:{color:"white",size:12}, bgcolor:"rgba(0,0,0,0)"},
+      margin:{l:10,r:10,t:14,b:10},
+    };
+
+    Plotly.newPlot("chart_1914258_home_drib", traces, layout, {responsive:true, displayModeBar:false});
+  };
+
+  window.redraw_1914258_home_drib();
+})();
+</script></body></html>

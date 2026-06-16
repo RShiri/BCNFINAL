@@ -1,0 +1,74 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+body{margin:0;background:#0d0d1a;color:#e0e0e0;font-family:system-ui}
+.ctrl-1913918_away_drib{display:flex;gap:12px;align-items:center;padding:10px 16px;background:#111128;flex-wrap:wrap}
+.ctrl-1913918_away_drib label{font-size:11px;color:#8888bb;letter-spacing:1px;text-transform:uppercase}
+.ctrl-1913918_away_drib select{background:#0d0d1a;color:#e0e0e0;border:1px solid #4444aa;border-radius:6px;padding:5px 10px;font-size:12px}
+#chart_1913918_away_drib{width:100%;height:520px}
+</style></head><body>
+<div class="ctrl-1913918_away_drib">
+  <label>Player:</label>
+  <select id="psel_1913918_away_drib" onchange="window.redraw_1913918_away_drib()">
+    <option value="all">All Players</option>
+    <option value="López">López</option><option value="Pedri">Pedri</option><option value="Raphinha">Raphinha</option><option value="Torrents">Torrents</option><option value="Yamal">Yamal</option>
+  </select>
+  <label style="margin-left:12px">Outcome:</label>
+  <select id="osel_1913918_away_drib" onchange="window.redraw_1913918_away_drib()">
+    <option value="all">All</option>
+    <option value="Successful">Successful</option>
+    <option value="Unsuccessful">Unsuccessful</option>
+  </select>
+  <span id="summary_1913918_away_drib" style="margin-left:auto;font-size:12px;color:#9999cc"></span>
+</div>
+<div id="chart_1913918_away_drib"></div>
+<script>
+(function(){
+  var data = [{"x": 108.0, "y": 69.68, "player": "Yamal", "outcome": "Unsuccessful", "minute": 2}, {"x": 111.36, "y": 69.36, "player": "Yamal", "outcome": "Successful", "minute": 2}, {"x": 86.88000000000001, "y": 12.0, "player": "Raphinha", "outcome": "Successful", "minute": 3}, {"x": 84.0, "y": 12.159999999999997, "player": "Pedri", "outcome": "Unsuccessful", "minute": 4}, {"x": 103.44, "y": 58.879999999999995, "player": "Yamal", "outcome": "Unsuccessful", "minute": 4}, {"x": 94.8, "y": 60.64, "player": "L\u00f3pez", "outcome": "Successful", "minute": 10}, {"x": 91.68, "y": 51.2, "player": "Yamal", "outcome": "Successful", "minute": 13}, {"x": 95.04, "y": 52.480000000000004, "player": "Yamal", "outcome": "Unsuccessful", "minute": 13}, {"x": 30.479999999999997, "y": 12.959999999999994, "player": "Yamal", "outcome": "Successful", "minute": 20}, {"x": 33.12, "y": 18.4, "player": "Yamal", "outcome": "Successful", "minute": 20}, {"x": 84.24, "y": 39.36, "player": "Raphinha", "outcome": "Unsuccessful", "minute": 32}, {"x": 85.44, "y": 16.32, "player": "L\u00f3pez", "outcome": "Unsuccessful", "minute": 40}, {"x": 92.64, "y": 54.56, "player": "Yamal", "outcome": "Successful", "minute": 45}, {"x": 91.68, "y": 62.4, "player": "Yamal", "outcome": "Successful", "minute": 50}, {"x": 81.84, "y": 40.96, "player": "Raphinha", "outcome": "Unsuccessful", "minute": 69}, {"x": 81.36, "y": 40.31999999999999, "player": "Raphinha", "outcome": "Unsuccessful", "minute": 69}, {"x": 113.04, "y": 59.36, "player": "Yamal", "outcome": "Unsuccessful", "minute": 74}, {"x": 113.04, "y": 60.4, "player": "Yamal", "outcome": "Unsuccessful", "minute": 74}, {"x": 11.04, "y": 4.320000000000007, "player": "Torrents", "outcome": "Unsuccessful", "minute": 91}];
+  var shapes = [{"type": "rect", "x0": 0, "y0": 0, "x1": 120, "y1": 80, "line": {"color": "white", "width": 2}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "line", "x0": 60, "y0": 0, "x1": 60, "y1": 80, "line": {"color": "white", "width": 1.5}}, {"type": "circle", "x0": 51, "y0": 31, "x1": 69, "y1": 49, "line": {"color": "white", "width": 1.5}}, {"type": "rect", "x0": 0, "y0": 18, "x1": 18, "y1": 62, "line": {"color": "white", "width": 1.5}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 0, "y0": 30, "x1": 6, "y1": 50, "line": {"color": "white", "width": 1}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 102, "y0": 18, "x1": 120, "y1": 62, "line": {"color": "white", "width": 1.5}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 114, "y0": 30, "x1": 120, "y1": 50, "line": {"color": "white", "width": 1}, "fillcolor": "rgba(0,0,0,0)"}];
+
+  window.redraw_1913918_away_drib = function() {
+    var p = document.getElementById("psel_1913918_away_drib").value;
+    var o = document.getElementById("osel_1913918_away_drib").value;
+    var filtered = data.filter(function(d){
+      return (p==="all" || d.player===p) && (o==="all" || d.outcome===o);
+    });
+    var succ = filtered.filter(function(d){return d.outcome==="Successful";});
+    var fail = filtered.filter(function(d){return d.outcome==="Unsuccessful";});
+    document.getElementById("summary_1913918_away_drib").textContent =
+      succ.length+" successful · "+fail.length+" unsuccessful";
+
+    var traces = [
+      {
+        x: succ.map(function(d){return d.x;}), y: succ.map(function(d){return d.y;}),
+        mode:"markers", name:"Successful",
+        marker:{size:12, color:"#2ca02c", symbol:"circle", line:{width:1.5, color:"white"}},
+        hovertext: succ.map(function(d){return "<b>"+d.player+"</b> ("+d.minute+"')<br>Successful Take-On";}),
+        hoverinfo:"text"
+      },
+      {
+        x: fail.map(function(d){return d.x;}), y: fail.map(function(d){return d.y;}),
+        mode:"markers", name:"Unsuccessful",
+        marker:{size:12, color:"#d62728", symbol:"x", line:{width:2, color:"#ff6666"}},
+        hovertext: fail.map(function(d){return "<b>"+d.player+"</b> ("+d.minute+"')<br>Unsuccessful Take-On";}),
+        hoverinfo:"text"
+      }
+    ];
+
+    var layout = {
+      paper_bgcolor:"#0d0d1a", plot_bgcolor:"#2d572c",
+      font:{color:"white"},
+      shapes: shapes,
+      xaxis:{range:[-2,122], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
+      yaxis:{range:[-2,82], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
+      showlegend:true,
+      legend:{x:0.5, y:-0.04, xanchor:"center", orientation:"h", font:{color:"white",size:12}, bgcolor:"rgba(0,0,0,0)"},
+      margin:{l:10,r:10,t:14,b:10},
+    };
+
+    Plotly.newPlot("chart_1913918_away_drib", traces, layout, {responsive:true, displayModeBar:false});
+  };
+
+  window.redraw_1913918_away_drib();
+})();
+</script></body></html>

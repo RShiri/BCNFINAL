@@ -1,0 +1,74 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+body{margin:0;background:#0d0d1a;color:#e0e0e0;font-family:system-ui}
+.ctrl-1913936_away_drib{display:flex;gap:12px;align-items:center;padding:10px 16px;background:#111128;flex-wrap:wrap}
+.ctrl-1913936_away_drib label{font-size:11px;color:#8888bb;letter-spacing:1px;text-transform:uppercase}
+.ctrl-1913936_away_drib select{background:#0d0d1a;color:#e0e0e0;border:1px solid #4444aa;border-radius:6px;padding:5px 10px;font-size:12px}
+#chart_1913936_away_drib{width:100%;height:520px}
+</style></head><body>
+<div class="ctrl-1913936_away_drib">
+  <label>Player:</label>
+  <select id="psel_1913936_away_drib" onchange="window.redraw_1913936_away_drib()">
+    <option value="all">All Players</option>
+    <option value="Araujo">Araujo</option><option value="Casadó">Casadó</option><option value="García">García</option><option value="Martín">Martín</option><option value="Olmo">Olmo</option><option value="Pedri">Pedri</option><option value="Raphinha">Raphinha</option><option value="Rashford">Rashford</option><option value="Torres">Torres</option>
+  </select>
+  <label style="margin-left:12px">Outcome:</label>
+  <select id="osel_1913936_away_drib" onchange="window.redraw_1913936_away_drib()">
+    <option value="all">All</option>
+    <option value="Successful">Successful</option>
+    <option value="Unsuccessful">Unsuccessful</option>
+  </select>
+  <span id="summary_1913936_away_drib" style="margin-left:auto;font-size:12px;color:#9999cc"></span>
+</div>
+<div id="chart_1913936_away_drib"></div>
+<script>
+(function(){
+  var data = [{"x": 52.08, "y": 63.68, "player": "Casad\u00f3", "outcome": "Successful", "minute": 0}, {"x": 24.720000000000002, "y": 6.8799999999999955, "player": "Mart\u00edn", "outcome": "Unsuccessful", "minute": 6}, {"x": 104.28, "y": 62.959999999999994, "player": "Raphinha", "outcome": "Unsuccessful", "minute": 9}, {"x": 56.04, "y": 65.28, "player": "Olmo", "outcome": "Successful", "minute": 14}, {"x": 54.35999999999999, "y": 64.4, "player": "Olmo", "outcome": "Unsuccessful", "minute": 14}, {"x": 76.8, "y": 19.759999999999998, "player": "Rashford", "outcome": "Unsuccessful", "minute": 17}, {"x": 75.36, "y": 24.32, "player": "Casad\u00f3", "outcome": "Unsuccessful", "minute": 19}, {"x": 105.36, "y": 66.72, "player": "Raphinha", "outcome": "Unsuccessful", "minute": 30}, {"x": 26.639999999999997, "y": 12.560000000000002, "player": "Garc\u00eda", "outcome": "Successful", "minute": 32}, {"x": 107.64, "y": 50.96, "player": "Raphinha", "outcome": "Unsuccessful", "minute": 36}, {"x": 95.75999999999999, "y": 38.4, "player": "Olmo", "outcome": "Unsuccessful", "minute": 40}, {"x": 96.0, "y": 38.48, "player": "Olmo", "outcome": "Unsuccessful", "minute": 40}, {"x": 88.32, "y": 52.879999999999995, "player": "Olmo", "outcome": "Unsuccessful", "minute": 42}, {"x": 91.44, "y": 40.8, "player": "Rashford", "outcome": "Successful", "minute": 47}, {"x": 98.64, "y": 74.24, "player": "Garc\u00eda", "outcome": "Successful", "minute": 53}, {"x": 107.28, "y": 15.200000000000003, "player": "Araujo", "outcome": "Unsuccessful", "minute": 55}, {"x": 76.67999999999999, "y": 32.879999999999995, "player": "Pedri", "outcome": "Successful", "minute": 56}, {"x": 106.8, "y": 21.279999999999994, "player": "Rashford", "outcome": "Unsuccessful", "minute": 57}, {"x": 115.91999999999999, "y": 20.0, "player": "Rashford", "outcome": "Successful", "minute": 59}, {"x": 95.75999999999999, "y": 20.159999999999997, "player": "Torres", "outcome": "Unsuccessful", "minute": 62}, {"x": 29.04, "y": 6.719999999999999, "player": "Pedri", "outcome": "Successful", "minute": 64}, {"x": 96.0, "y": 43.04, "player": "Olmo", "outcome": "Unsuccessful", "minute": 79}, {"x": 101.16, "y": 61.76, "player": "Rashford", "outcome": "Unsuccessful", "minute": 81}, {"x": 79.44, "y": 65.68, "player": "Rashford", "outcome": "Unsuccessful", "minute": 89}];
+  var shapes = [{"type": "rect", "x0": 0, "y0": 0, "x1": 120, "y1": 80, "line": {"color": "white", "width": 2}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "line", "x0": 60, "y0": 0, "x1": 60, "y1": 80, "line": {"color": "white", "width": 1.5}}, {"type": "circle", "x0": 51, "y0": 31, "x1": 69, "y1": 49, "line": {"color": "white", "width": 1.5}}, {"type": "rect", "x0": 0, "y0": 18, "x1": 18, "y1": 62, "line": {"color": "white", "width": 1.5}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 0, "y0": 30, "x1": 6, "y1": 50, "line": {"color": "white", "width": 1}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 102, "y0": 18, "x1": 120, "y1": 62, "line": {"color": "white", "width": 1.5}, "fillcolor": "rgba(0,0,0,0)"}, {"type": "rect", "x0": 114, "y0": 30, "x1": 120, "y1": 50, "line": {"color": "white", "width": 1}, "fillcolor": "rgba(0,0,0,0)"}];
+
+  window.redraw_1913936_away_drib = function() {
+    var p = document.getElementById("psel_1913936_away_drib").value;
+    var o = document.getElementById("osel_1913936_away_drib").value;
+    var filtered = data.filter(function(d){
+      return (p==="all" || d.player===p) && (o==="all" || d.outcome===o);
+    });
+    var succ = filtered.filter(function(d){return d.outcome==="Successful";});
+    var fail = filtered.filter(function(d){return d.outcome==="Unsuccessful";});
+    document.getElementById("summary_1913936_away_drib").textContent =
+      succ.length+" successful · "+fail.length+" unsuccessful";
+
+    var traces = [
+      {
+        x: succ.map(function(d){return d.x;}), y: succ.map(function(d){return d.y;}),
+        mode:"markers", name:"Successful",
+        marker:{size:12, color:"#2ca02c", symbol:"circle", line:{width:1.5, color:"white"}},
+        hovertext: succ.map(function(d){return "<b>"+d.player+"</b> ("+d.minute+"')<br>Successful Take-On";}),
+        hoverinfo:"text"
+      },
+      {
+        x: fail.map(function(d){return d.x;}), y: fail.map(function(d){return d.y;}),
+        mode:"markers", name:"Unsuccessful",
+        marker:{size:12, color:"#d62728", symbol:"x", line:{width:2, color:"#ff6666"}},
+        hovertext: fail.map(function(d){return "<b>"+d.player+"</b> ("+d.minute+"')<br>Unsuccessful Take-On";}),
+        hoverinfo:"text"
+      }
+    ];
+
+    var layout = {
+      paper_bgcolor:"#0d0d1a", plot_bgcolor:"#2d572c",
+      font:{color:"white"},
+      shapes: shapes,
+      xaxis:{range:[-2,122], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
+      yaxis:{range:[-2,82], showgrid:false, zeroline:false, showticklabels:false, fixedrange:true},
+      showlegend:true,
+      legend:{x:0.5, y:-0.04, xanchor:"center", orientation:"h", font:{color:"white",size:12}, bgcolor:"rgba(0,0,0,0)"},
+      margin:{l:10,r:10,t:14,b:10},
+    };
+
+    Plotly.newPlot("chart_1913936_away_drib", traces, layout, {responsive:true, displayModeBar:false});
+  };
+
+  window.redraw_1913936_away_drib();
+})();
+</script></body></html>
