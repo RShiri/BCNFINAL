@@ -13,7 +13,6 @@ Layout (24" × 14" canvas, 200 DPI ≈ 4800 × 2800 px):
 from __future__ import annotations
 
 import os
-import sys
 import math
 import json
 import logging
@@ -33,19 +32,138 @@ from matplotlib.patches import FancyBboxPatch
 from matplotlib.lines import Line2D
 from mplsoccer import Pitch, VerticalPitch
 
-# ── Import shared logic from parent BCNPROJECT codebase ────────────────────
-_REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(_REPO_ROOT))
-
-from generate_all_assets import (
-    _ws_to_sb_x,
-    _estimate_xg,
-    _player_name,
-    SCALE_Y,
-)
-from Projects.shotmap_whoscored import build_shot_df
-
 from wc2026.team_colors import get_team_colors
+
+# ── Coordinate + shot helpers (inlined — renderer is self-contained) ────────
+SCALE_Y = 0.80
+
+
+def _ws_to_sb_x(ws_x: float) -> float:
+    if ws_x <= 50:   return ws_x * (60.0 / 50.0)
+    elif ws_x <= 89: return 60.0 + (ws_x - 50) * (48.0 / 39.0)
+    else:            return 108.0 + (ws_x - 89) * (12.0 / 11.0)
+
+
+def _estimate_xg(x_sb: float, y_sb: float,
+                 is_penalty: bool, is_big_chance: bool, body_part: str) -> float:
+    if is_penalty:
+        return 0.76
+    dx = 120.0 - x_sb
+    dy = 40.0 - y_sb
+    distance = max(math.sqrt(dx ** 2 + dy ** 2), 0.5)
+    angle = math.atan2(4.0, distance)
+    xg = (angle / (math.pi / 2)) * (1 / (1 + distance / 30))
+    if body_part == "Header":
+        xg *= 0.4
+    if is_big_chance:
+        xg = max(0.35, xg * 3.5)
+        xg = min(0.65, xg)
+    if distance > 18:
+        xg *= (18 / distance) ** 2
+    return round(min(max(xg, 0.01), 0.95), 3)
+
+
+def _player_name(match_data: dict, player_id) -> str:
+    for side in ("home", "away"):
+        for p in match_data.get(side, {}).get("players", []):
+            if p.get("playerId") == player_id:
+                name = p.get("name", "")
+                parts = name.split()
+                return parts[-1] if len(parts) >= 2 else name
+    return str(player_id)
+
+
+def _player_full_name(match_data: dict, player_id) -> str:
+    for side in ("home", "away"):
+        for p in match_data.get(side, {}).get("players", []):
+            if p.get("playerId") == player_id:
+                return p.get("name", str(player_id))
+    return str(player_id)
+
+
+def _team_id_for_name(match_data: dict, team_name: str) -> int:
+    for side in ("home", "away"):
+        info = match_data.get(side, {})
+        if team_name.lower() in info.get("name", "").lower():
+            return info["teamId"]
+    raise ValueError(f"Team '{team_name}' not found in match data")
+
+
+def _extract_qualifiers(ev: dict):
+    qual_list = ev.get("qualifiers", [])
+    quals = {q.get("type", {}).get("displayName", "") for q in qual_list}
+    body = ("Right Foot" if "RightFoot" in quals else
+            "Left Foot"  if "LeftFoot"  in quals else
+            "Header"     if "Head"      in quals else "Unknown")
+    situation = ("Penalty"    if "Penalty"         in quals else
+                 "Free Kick"  if "DirectFreekick"  in quals else
+                 "Fast Break" if "FastBreak"       in quals else
+                 "Set Piece"  if "SetPiece"        in quals else
+                 "Corner"     if "FromCorner"      in quals else "Open Play")
+    if any(z in quals for z in ("SmallBoxCentre", "SmallBoxLeft", "SmallBoxRight",
+                                 "DeepBoxCentre",  "DeepBoxLeft",  "DeepBoxRight")):
+        zone = "6-Yard Box"
+    elif any(z in quals for z in ("BoxCentre", "BoxLeft", "BoxRight")):
+        zone = "Inside Box"
+    elif any(z in quals for z in ("OutOfBoxCentre", "OutOfBoxLeft", "OutOfBoxRight")):
+        zone = "Outside Box"
+    else:
+        zone = "Unknown"
+    big_chance = "BigChance" in quals
+    one_on_one = "OneOnOne"  in quals
+    gm_y = gm_z = None
+    for q in qual_list:
+        qname = q.get("type", {}).get("displayName", "")
+        try:
+            if qname == "GoalMouthY":   gm_y = float(q.get("value", 0))
+            elif qname == "GoalMouthZ": gm_z = float(q.get("value", 0))
+        except (TypeError, ValueError):
+            pass
+    return body, situation, zone, big_chance, one_on_one, gm_y, gm_z
+
+
+_SHOT_TYPES = {"MissedShots", "SavedShot", "ShotOnPost", "BlockedShot", "Goal"}
+
+
+def build_shot_df(match_data: dict, team_name: str) -> pd.DataFrame:
+    tid = _team_id_for_name(match_data, team_name)
+    rows = []
+    for ev in match_data.get("events", []):
+        if ev.get("teamId") != tid:
+            continue
+        type_name = ev.get("type", {}).get("displayName", "")
+        if type_name not in _SHOT_TYPES:
+            continue
+        x_sb = _ws_to_sb_x(ev.get("x", 0))
+        y_sb = 80 - ev.get("y", 0) * SCALE_Y
+        body, situation, zone, big_chance, one_on_one, gm_y, gm_z = _extract_qualifiers(ev)
+        is_penalty = (situation == "Penalty")
+        if is_penalty:
+            x_sb, y_sb = 108.0, 40.0
+        period_raw = ev.get("period", {}).get("displayName", "")
+        period = ("ET" if "Extra" in period_raw else
+                  "H2" if "Second" in period_raw else "H1")
+        xg_stored = ev.get("xG")
+        rows.append({
+            "x":            x_sb,
+            "y":            y_sb,
+            "minute":       ev.get("minute", 0),
+            "player":       _player_name(match_data, ev.get("playerId")),
+            "full_name":    _player_full_name(match_data, ev.get("playerId")),
+            "is_goal":      type_name == "Goal",
+            "is_on_target": type_name in ("SavedShot", "Goal"),
+            "xG":           (xg_stored if xg_stored is not None
+                             else _estimate_xg(x_sb, y_sb, is_penalty, big_chance, body)),
+            "body_part":    body,
+            "situation":    situation,
+            "zone":         zone,
+            "big_chance":   big_chance,
+            "one_on_one":   one_on_one,
+            "period":       period,
+            "gm_y":         gm_y,
+            "gm_z":         gm_z,
+        })
+    return pd.DataFrame(rows)
 
 # ── Visual constants (white-canvas theme) ──────────────────────────────────
 CANVAS_BG       = "#ffffff"
@@ -455,26 +573,33 @@ def _draw_stats_table(ax: plt.Axes, match_data: dict,
 
     stats = match_data.get("match_stats", {})
 
+    def _stat(key: str, side: str):
+        """Accepts both nested {"key": {"home": v}} and flat {"key_home": v} formats."""
+        v = stats.get(key)
+        if isinstance(v, dict):
+            return v.get(side)
+        return stats.get(f"{key}_{side}")
+
     def _v(key: str, side: str, fmt: str = "{}") -> str:
-        val = stats.get(key, {}).get(side)
+        val = _stat(key, side)
         if val is None:
             return "—"
         return fmt.format(val)
 
-    xg_h = stats.get("xg", {}).get("home")
-    xg_a = stats.get("xg", {}).get("away")
+    xg_h = _stat("xg", "home")
+    xg_a = _stat("xg", "away")
 
-    bc_created_h = stats.get("big_chances_created", {}).get("home", "—")
-    bc_missed_h  = stats.get("big_chances_missed",  {}).get("home", 0)
-    bc_created_a = stats.get("big_chances_created", {}).get("away", "—")
-    bc_missed_a  = stats.get("big_chances_missed",  {}).get("away", 0)
-    bc_h = f"{bc_created_h} ({bc_missed_h})" if bc_created_h != "—" else "—"
-    bc_a = f"{bc_created_a} ({bc_missed_a})" if bc_created_a != "—" else "—"
+    bc_created_h = _stat("big_chances_created", "home")
+    bc_missed_h  = _stat("big_chances_missed",  "home") or 0
+    bc_created_a = _stat("big_chances_created", "away")
+    bc_missed_a  = _stat("big_chances_missed",  "away") or 0
+    bc_h = f"{bc_created_h} ({bc_missed_h})" if bc_created_h is not None else "—"
+    bc_a = f"{bc_created_a} ({bc_missed_a})" if bc_created_a is not None else "—"
 
-    passes_h = stats.get("passes_total",    {}).get("home", "—")
-    pass_acc_h = stats.get("passes_accuracy", {}).get("home")
-    passes_a = stats.get("passes_total",    {}).get("away", "—")
-    pass_acc_a = stats.get("passes_accuracy", {}).get("away")
+    passes_h   = _stat("passes_total", "home") or _stat("passes", "home") or "—"
+    pass_acc_h = _stat("passes_accuracy", "home") or _stat("pass_accuracy", "home")
+    passes_a   = _stat("passes_total", "away") or _stat("passes", "away") or "—"
+    pass_acc_a = _stat("passes_accuracy", "away") or _stat("pass_accuracy", "away")
     p_h = f"{passes_h} ({pass_acc_h}%)" if pass_acc_h is not None else str(passes_h)
     p_a = f"{passes_a} ({pass_acc_a}%)" if pass_acc_a is not None else str(passes_a)
 
