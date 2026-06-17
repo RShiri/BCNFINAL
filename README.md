@@ -1,10 +1,12 @@
 # Complete Football Analytics
 
-Welcome to the **Complete Football Analytics** repository! This project is a comprehensive resource for learning and applying data science and machine learning techniques specifically to football (soccer) data. It covers everything from Python basics to advanced web scraping, data visualization, and predictive modeling.
+Welcome to the **Complete Football Analytics** repository! This project is a comprehensive resource for learning and applying data science, machine learning, and automated data engineering techniques to football (soccer) data. It covers everything from Python basics to advanced web scraping, data visualization, predictive modeling, and production-ready automated reporting pipelines.
+
+---
 
 ## 📂 Repository Structure
 
-The repository is organized into progressive modules, taking you from a beginner level to building complex analytics projects.
+The repository is organized into progressive modules and production subprojects:
 
 ### 📚 Modules
 
@@ -13,20 +15,15 @@ The repository is organized into progressive modules, taking you from a beginner
     *   Covers: Syntax, Variables, Data Types, Control Flows (If/Else, Loops), Functions, and Error Handling.
 
 *   **Module 3: Data Acquisition & Web Scraping**
-    *   Master the art of gathering football data from various sources.
+    *   Master gathering football data from various web sources and APIs.
     *   **APIs & Libraries**: `Statsbombpy`, `Soccerdata`.
-    *   **Scraping Targets**: FBRef, Sofascore, Understat, Fotmob, Whoscored.
-    *   **Techniques**: Handling requests, parsing HTML with `BeautifulSoup`, and using browser automation tools like `Playwright` and `Undetected Chromedriver` etc.
+    *   **Scraping Targets**: FBRef, Sofascore, Understat, Fotmob, WhoScored.
+    *   **Techniques**: Handling requests, parsing HTML with `BeautifulSoup`, and using browser automation tools like `Playwright` and `Undetected Chromedriver`.
 
 *   **Module 4: Data Visualization**
     *   Create professional-grade football visualizations.
-    *   **Libraries**: `Matplotlib`, `Seaborn`, and the specialized `mplsoccer` library.
-    *   **Visualizations**:
-        *   Scatter Plots, Heatmaps, and Radar Charts.
-        *   "Pizza" Plots (Percentile Ranks).
-        *   Pass Networks and Passmaps.
-        *   Shotmaps and xG Flow Charts.
-        *   Pitch plotting and grid layouts.
+    *   **Libraries**: `Matplotlib`, `Seaborn`, and `mplsoccer`.
+    *   **Visualizations**: Scatter Plots, Heatmaps, Radar Charts, Pizza Plots (Percentile Ranks), Pass Networks, Shotmaps, and xG Flow Charts.
 
 *   **Module 5: Data Analysis**
     *   Dive deep into data manipulation and statistical analysis.
@@ -35,55 +32,64 @@ The repository is organized into progressive modules, taking you from a beginner
 
 *   **Module 6: Machine Learning for Football**
     *   Apply ML algorithms to football data.
-    *   **Concepts**: Supervised vs. Unsupervised Learning.
-    *   **Applications**:
-        *   **Classification**: Predicting categorical outcomes (e.g., match results).
-        *   **Regression**: Predicting continuous values (e.g., player values, xG).
-        *   **Clustering**: Grouping similar players or teams.
-        *   Model Evaluation techniques.
+    *   **Applications**: Match outcome predictions (Classification), player valuation/xG models (Regression), and player/team profile clustering (Unsupervised).
 
-### 🚀 Projects
+---
 
-Apply what you've learned in these comprehensive projects:
+## 🏆 Subprojects
 
-1.  **Project 1: Match Dashboards**: Build an interactive dashboard to analyze match performance.
-2.  **Project 2: Match Prediction**: Develop a machine learning model to predict the outcome of football matches using historical data.
+### FIFA World Cup 2026 Match Analytics Pipeline (`wc2026`)
+A fully automated data engineering and visualization pipeline built for the World Cup 2026 tournament.
+*   **Automatic Scraping**: Automatically fetches live match metadata, stats, lineups, and coordinate-level event data from FotMob and WhoScored.
+*   **High-Resolution Infographics**: Generates a publication-quality 4800x2800px (24" x 14") infographic dashboard showing pass networks, shot maps, zebra-striped stats comparisons, and final third entry vectors.
+*   **Git Publishing & Alerts**: Automatically pushes the generated images to a Git repository and fires WhatsApp notifications containing raw image links to match analysts.
+*   **Auto-Scheduler**: Includes PowerShell scripts to register Windows Task Scheduler jobs to automatically run tasks precisely at match-conclusion times.
+*   *See [wc2026/README.md](file:///c:/Users/puzik/BCNFINAL/wc2026/README.md) for full setup and automation guide.*
+
+---
 
 ## 🛠️ Installation & Setup
 
-To get started with this repository, you'll need Python installed. It is recommended to use a virtual environment.
+Ensure you have Python 3.10+ installed. It is recommended to use a virtual environment.
 
 1.  **Clone the repository**:
     ```bash
-    git clone <repository-url>
-    cd BCNPROJECT-main
+    git clone https://github.com/RShiri/BCNFINAL.git
+    cd BCNFINAL
     ```
 
-2.  **Install Dependencies**:
-    The project relies on several powerful libraries. Install them using the provided `requirements.txt` file.
+2.  **Install Core Dependencies**:
     ```bash
     pip install -r requirements.txt
     ```
 
-    **Key Libraries Include:**
-    *   `pandas`, `numpy`: Data manipulation.
-    *   `matplotlib`, `seaborn`: General plotting.
-    *   `mplsoccer`: Specialized football plotting.
-    *   `soccerdata`, `statsbombpy`: Data access.
-    *   `scikit-learn`: Machine learning.
-    *   `playwright`: Browser automation (may require additional setup: `playwright install`).
+3.  **Install Subproject Dependencies** (if running the WC2026 pipeline):
+    ```bash
+    pip install -r wc2026/requirements.txt
+    ```
+
+4.  **Configure Environment Variables**:
+    *   Copy `wc2026/.env.template` to `.env` in the root directory and populate your API tokens, Git credentials, and WhatsApp configurations.
+
+---
 
 ## 📈 Usage
 
-Most of the content is provided in **Jupyter Notebooks (`.ipynb`)**. To explore the modules:
+Most tutorial content is provided in **Jupyter Notebooks (`.ipynb`)**. To explore:
 
 1.  Launch Jupyter:
     ```bash
     jupyter notebook
     ```
-2.  Navigate to the desired module directory.
-3.  Open a notebook (e.g., `3.2 Statsbomb API.ipynb`) and run the cells.
+2.  Open the desired notebook (e.g., `3.2 Statsbomb API.ipynb`) and execute the cells.
+
+For running the automated match reporting CLI:
+```bash
+py -m wc2026.run_match --fotmob-id [MATCH_ID]
+```
+
+---
 
 ## 🤝 Contributing
 
-Feel free to fork this repository, submit Pull Requests, or open Issues if you find bugs or have suggestions for new analytics techniques!
+Feel free to fork this repository, submit Pull Requests, or open Issues if you have suggestions for new football data visualization templates or analytics models!
