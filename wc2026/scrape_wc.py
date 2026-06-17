@@ -52,6 +52,27 @@ MATCHES_DIR.mkdir(parents=True, exist_ok=True)
 
 SHOT_TYPES = {"MissedShots", "SavedShot", "ShotOnPost", "Goal"}
 
+# WhoScored FIFA World Cup 2026 identifiers (Region 247 / Tournament 36)
+WC_SEASON = "10498"
+WC_STAGE  = "25505"
+WC_FIXTURES_URL = (
+    f"https://www.whoscored.com/Regions/247/Tournaments/36/Seasons/{WC_SEASON}"
+    f"/Stages/{WC_STAGE}/Fixtures/International-FIFA-World-Cup-2026"
+)
+
+# WhoScored team name -> badge filename / nicer display name
+TEAM_ALIASES = {
+    "Cabo Verde":          "Cape Verde",
+    "Republic of Korea":   "South Korea",
+    "Korea Republic":      "South Korea",
+    "IR Iran":             "Iran",
+    "United States":       "USA",
+}
+
+
+def _canon_team(name: str) -> str:
+    return TEAM_ALIASES.get(name, name)
+
 
 # ══════════════════════════════════════════════════════════════════════════
 # STATS COMPUTATION (from the WhoScored event stream)
@@ -154,6 +175,8 @@ def whoscored_to_wc2026(mcd: dict, *, stage: str = "Group Stage",
 
     h_id = home.get("teamId")
     a_id = away.get("teamId")
+    home_name = _canon_team(home.get("name", "Home"))
+    away_name = _canon_team(away.get("name", "Away"))
 
     def players(side):
         out = []
@@ -184,12 +207,12 @@ def whoscored_to_wc2026(mcd: dict, *, stage: str = "Group Stage",
             "competition": competition,
         },
         "home": {
-            "teamId": h_id, "name": home.get("name", "Home"),
+            "teamId": h_id, "name": home_name,
             "score": h_score, "penalty_score": None,
             "players": players(home), "stats": {}, "field": "home",
         },
         "away": {
-            "teamId": a_id, "name": away.get("name", "Away"),
+            "teamId": a_id, "name": away_name,
             "score": a_score, "penalty_score": None,
             "players": players(away), "stats": {}, "field": "away",
         },
@@ -199,71 +222,68 @@ def whoscored_to_wc2026(mcd: dict, *, stage: str = "Group Stage",
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# SELENIUM SCRAPE (non-headless, like the Barcelona scraper)
+# SCRAPE via cloudscraper (bypasses Cloudflare - no browser, no CAPTCHA)
 # ══════════════════════════════════════════════════════════════════════════
 
-def scrape_whoscored_match(ws_id: str, captcha_wait: int = 180) -> dict | None:
+_SCRAPER = None
+
+def _scraper():
+    global _SCRAPER
+    if _SCRAPER is None:
+        import cloudscraper
+        _SCRAPER = cloudscraper.create_scraper(
+            browser={"browser": "chrome", "platform": "windows", "desktop": True}
+        )
+    return _SCRAPER
+
+
+def scrape_whoscored_match(ws_id: str) -> dict | None:
     """
-    Open WhoScored match by ID in a VISIBLE browser and extract matchCentreData.
-    Solve the Cloudflare CAPTCHA by hand if it appears; we poll up to captcha_wait
-    seconds for the data blob to show up.
+    Fetch a WhoScored match by ID via Selenium (to bypass Cloudflare) and extract matchCentreData.
     """
+    from wc2026.scraper import whoscored_fetch_match
+    url = f"https://www.whoscored.com/Matches/{ws_id}/Live/x"
+    log.info("Fetching match %s via Selenium ...", ws_id)
     try:
-        import undetected_chromedriver as uc
-        driver = uc.Chrome(options=_visible_opts(uc.ChromeOptions()))
-    except ImportError:
-        from selenium import webdriver
-        opts = webdriver.ChromeOptions()
-        _visible_opts(opts)
-        driver = webdriver.Chrome(options=opts)
-
-    url = f"https://www.whoscored.com/Matches/{ws_id}/Live"
-    log.info("Loading %s  (solve the CAPTCHA in the window if shown)", url)
-    try:
-        driver.get(url)
-        found = False
-        for i in range(captcha_wait):
-            if "matchCentreData" in driver.page_source:
-                found = True
-                break
-            if i and i % 15 == 0:
-                log.info("  still waiting for data... %ds (solve CAPTCHA if needed)", i)
-            time.sleep(1)
-        if not found:
-            log.error("  timed out waiting for matchCentreData (id=%s)", ws_id)
+        data = whoscored_fetch_match(url, timeout=40)
+        if not data:
+            log.error("  Failed to fetch or parse WhoScored data for match %s", ws_id)
             return None
-
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(driver.page_source, "html.parser")
-        script = next((s.string for s in soup.find_all("script")
-                       if s.string and "matchCentreData:" in s.string), None)
-        if not script:
-            log.error("  matchCentreData script block not found (id=%s)", ws_id)
-            return None
-
-        start = script.find("matchCentreData:") + len("matchCentreData:")
-        body = script[start:].strip()
-        if "matchCentreEventTypeJson" in body:
-            body = body.split("matchCentreEventTypeJson")[0].strip().rstrip(",")
-        data = json.loads(body)
         data["matchId"] = int(ws_id)
-        log.info("  extracted %d events (id=%s)", len(data.get("events", [])), ws_id)
+        log.info("  OK: %s %s-%s %s (%d events)",
+                 data.get("home", {}).get("name"),
+                 data.get("home", {}).get("scores", {}).get("fulltime"),
+                 data.get("away", {}).get("scores", {}).get("fulltime"),
+                 data.get("away", {}).get("name"),
+                 len(data.get("events", [])))
         return data
     except Exception as exc:
         log.error("  scrape error (id=%s): %s", ws_id, exc)
         return None
-    finally:
-        try:
-            driver.quit()
-        except Exception:
-            pass
 
 
-def _visible_opts(opts):
-    # NOTE: NOT headless on purpose - you need to see + solve the CAPTCHA.
-    opts.add_argument("--window-size=1400,1000")
-    opts.add_argument("--disable-blink-features=AutomationControlled")
-    return opts
+def discover_fixtures() -> dict:
+    """
+    Scrape the WhoScored WC2026 fixtures page and return
+    {match_id: {"slug": str, "played": bool, "home_score": int, "away_score": int}}.
+    """
+    import re
+    log.info("Discovering WC2026 fixtures from WhoScored ...")
+    h = _scraper().get(WC_FIXTURES_URL, timeout=30).text
+    games: dict = {}
+    # Played matches carry a score (two <span> values) on the scoresBtn anchor
+    for mid, slug, hs, a in re.findall(
+        r'scoresBtn-(\d+)"[^>]*href="/matches/\d+/live/'
+        r'international-fifa-world-cup-2026-([a-z0-9-]+)"><span>(\d+)</span><span>(\d+)</span>', h):
+        games[mid] = {"slug": slug, "played": True,
+                      "home_score": int(hs), "away_score": int(a)}
+    # All listed matches (played + scheduled)
+    for mid, slug in re.findall(
+        r'/matches/(\d+)/live/international-fifa-world-cup-2026-([a-z0-9-]+)', h):
+        games.setdefault(mid, {"slug": slug, "played": False})
+    played = sum(1 for g in games.values() if g["played"])
+    log.info("Discovered %d fixtures (%d played).", len(games), played)
+    return games
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -301,11 +321,22 @@ def main() -> None:
     src = p.add_mutually_exclusive_group(required=True)
     src.add_argument("--ws-id", nargs="+", help="WhoScored match ID(s) to scrape")
     src.add_argument("--from-cache", help="Convert an existing raw matchCentreData JSON")
+    src.add_argument("--all-played", action="store_true",
+                     help="Auto-discover and scrape EVERY played WC2026 game")
+    src.add_argument("--discover", action="store_true",
+                     help="Just list discovered fixtures and exit")
     p.add_argument("--stage", default="Group Stage", help="Tournament stage label")
     p.add_argument("--no-render", action="store_true", help="Save JSON only, skip PNG")
     args = p.parse_args()
 
     render = not args.no_render
+
+    if args.discover:
+        games = discover_fixtures()
+        for mid, g in sorted(games.items(), key=lambda x: int(x[0])):
+            sc = f"{g.get('home_score')}-{g.get('away_score')}" if g["played"] else "scheduled"
+            print(f"  {mid}  {g['slug']:42s} {sc}")
+        return
 
     if args.from_cache:
         with open(args.from_cache, encoding="utf-8") as fh:
@@ -314,8 +345,14 @@ def main() -> None:
         _save_and_render(wc, None, render)
         return
 
+    if args.all_played:
+        games = discover_fixtures()
+        ids = [m for m, g in games.items() if g["played"]]
+    else:
+        ids = args.ws_id
+
     ok = 0
-    for wid in args.ws_id:
+    for wid in ids:
         mcd = scrape_whoscored_match(wid)
         if not mcd:
             log.warning("Skipping id=%s (no data)", wid)
@@ -323,8 +360,8 @@ def main() -> None:
         wc = whoscored_to_wc2026(mcd, stage=args.stage)
         _save_and_render(wc, mcd, render)
         ok += 1
-        time.sleep(8)  # be polite between matches
-    log.info("Done. %d/%d matches processed.", ok, len(args.ws_id))
+        time.sleep(2)  # be polite between matches
+    log.info("Done. %d/%d matches processed.", ok, len(ids))
 
 
 if __name__ == "__main__":

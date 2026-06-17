@@ -343,7 +343,8 @@ def whoscored_fetch_match(ws_url: str, timeout: int = 30) -> dict | None:
     try:
         import undetected_chromedriver as uc
         options = uc.ChromeOptions()
-        options.add_argument("--headless=new")
+        if os.environ.get("WC2026_VISIBLE") != "1":
+            options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--window-size=1920,1080")
@@ -352,7 +353,8 @@ def whoscored_fetch_match(ws_url: str, timeout: int = 30) -> dict | None:
         from selenium import webdriver
         from selenium.webdriver.chrome.options import Options
         options = Options()
-        options.add_argument("--headless=new")
+        if os.environ.get("WC2026_VISIBLE") != "1":
+            options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--window-size=1920,1080")
@@ -424,7 +426,8 @@ def whoscored_search_match_id(home_name: str, away_name: str) -> int | None:
     try:
         import undetected_chromedriver as uc
         options = uc.ChromeOptions()
-        options.add_argument("--headless=new")
+        if os.environ.get("WC2026_VISIBLE") != "1":
+            options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         driver = uc.Chrome(options=options)
@@ -432,7 +435,8 @@ def whoscored_search_match_id(home_name: str, away_name: str) -> int | None:
         from selenium import webdriver
         from selenium.webdriver.chrome.options import Options
         options = Options()
-        options.add_argument("--headless=new")
+        if os.environ.get("WC2026_VISIBLE") != "1":
+            options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         driver = webdriver.Chrome(options=options)
@@ -490,6 +494,7 @@ def build_match_json(fm_data: dict, ws_data: dict | None,
         away_id   = xml_match.get("away", {}).get("id")
         score_str = xml_match.get("status", {}).get("scoreStr", "0 - 0")
         utc_time  = xml_match.get("status", {}).get("utcTime", "")
+        general   = {"matchId": xml_match.get("id", 0)}
     else:
         general   = fm_data.get("general", {})
         header    = fm_data.get("header", {})
