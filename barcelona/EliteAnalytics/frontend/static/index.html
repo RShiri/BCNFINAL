@@ -89,71 +89,96 @@
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(255, 255, 255, 0.2);
         }
+
+        /* NAV */
+        .nav {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 14px 32px;
+            background: #08081a;
+            border-bottom: 1px solid #1e1e4a;
+            z-index: 100;
+        }
+        .nav-logo {
+            font-size: 18px;
+            font-weight: 900;
+            color: #f5c518;
+            letter-spacing: -0.5px;
+        }
+        .nav-logo span {
+            color: #004d98;
+        }
+        .nav a {
+            font-size: 13px;
+            color: #9999cc;
+            transition: color 0.2s;
+        }
+        .nav a:hover, .nav a.active {
+            color: #fff;
+        }
     </style>
 </head>
 
-<body class="flex h-screen overflow-hidden">
+<body class="flex flex-col h-screen overflow-hidden">
 
-    <!-- Sidebar -->
-    <aside
-        class="w-72 flex-shrink-0 glass-panel border-r border-t-0 border-b-0 border-l-0 rounded-none z-20 flex flex-col">
-        <div class="p-6 border-b border-gray-800">
-            <h1
-                class="text-2xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-[#edbb00] to-[#ffffff]">
-                ELITE<br>BARCA ANALYTICS
-            </h1>
-            <p class="text-xs text-gray-400 mt-1 uppercase tracking-widest">Pro Scouting Dashboard</p>
-        </div>
+    <!-- Navigation Bar -->
+    <nav class="nav">
+      <div class="nav-logo">BCN<span>Analytics</span></div>
+      <a href="/assets/html/index.html">Season</a>
+      <span style="color:#333355;font-size:18px">|</span>
+      <a href="/" class="active">Interactive Dashboard</a>
+      <span style="color:#333355;font-size:18px">|</span>
+      <span style="font-size:12px;color:#555577" id="nav-match-count">2025/26 · 57 matches</span>
+    </nav>
 
-        <div class="p-6 flex-grow">
-            <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Select Match</h2>
-            <select id="match-selector"
-                class="w-full bg-black bg-opacity-40 border border-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none transition-colors">
-                <option value="" disabled selected>Loading matches...</option>
-            </select>
+    <div class="flex flex-grow overflow-hidden">
 
-            <div class="mt-8">
-                <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Controls</h2>
-                <div class="space-y-2">
-                    <button
-                        class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white hover:bg-opacity-5 rounded transition-colors active">Match
-                        Summary</button>
-                    <button
-                        class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white hover:bg-opacity-5 rounded transition-colors">Player
-                        Percentiles</button>
-                    <button
-                        class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white hover:bg-opacity-5 rounded transition-colors">Team
-                        Sequences</button>
+        <!-- Sidebar -->
+        <aside
+            class="w-72 flex-shrink-0 glass-panel border-r border-t-0 border-b-0 border-l-0 rounded-none z-20 flex flex-col">
+            <div class="p-6 border-b border-gray-800">
+                <h1
+                    class="text-2xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-[#edbb00] to-[#ffffff]">
+                    ELITE<br>BARCA ANALYTICS
+                </h1>
+                <p class="text-xs text-gray-400 mt-1 uppercase tracking-widest">Pro Scouting Dashboard</p>
+            </div>
+
+            <div class="p-6 flex-grow">
+                <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Select Match</h2>
+                <select id="match-selector"
+                    class="w-full bg-black bg-opacity-40 border border-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none transition-colors">
+                    <option value="" disabled selected>Loading matches...</option>
+                </select>
+
+                <div class="mt-8">
+                    <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Controls</h2>
+                    <div class="space-y-2">
+                        <button
+                            class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white hover:bg-opacity-5 rounded transition-colors active">Match
+                            Summary</button>
+                        <button
+                            class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white hover:bg-opacity-5 rounded transition-colors">Player
+                            Percentiles</button>
+                        <button
+                            class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white hover:bg-opacity-5 rounded transition-colors">Team
+                            Sequences</button>
+                    </div>
                 </div>
             </div>
 
-            <div class="mt-8">
-                <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Controls</h2>
-                <div class="space-y-2">
-                    <button
-                        class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white hover:bg-opacity-5 rounded transition-colors active">Match
-                        Summary</button>
-                    <button
-                        class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white hover:bg-opacity-5 rounded transition-colors">Player
-                        Percentiles</button>
-                    <button
-                        class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white hover:bg-opacity-5 rounded transition-colors">Team
-                        Sequences</button>
-                </div>
+            <div class="p-6 border-t border-gray-800">
+                <button id="export-pdf"
+                    class="btn-primary w-full py-3 rounded-lg text-sm font-semibold flex justify-center items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    <span>Generate PDF Report</span>
+                </button>
             </div>
-        </div>
-
-        <div class="p-6 border-t border-gray-800">
-            <button id="export-pdf"
-                class="btn-primary w-full py-3 rounded-lg text-sm font-semibold flex justify-center items-center space-x-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                </svg>
-                <span>Generate PDF Report</span>
-            </button>
-        </div>
-    </aside>
+        </aside>
 
     <!-- Main Content -->
     <main class="flex-grow flex flex-col overflow-y-auto" id="dashboard-content">
@@ -294,6 +319,8 @@
             </div>
         </div>
     </main>
+    
+    </div>
 
     <!-- Radar Modal (Hidden by default) -->
     <div id="radar-modal"

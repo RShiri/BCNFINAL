@@ -26,7 +26,7 @@ app.mount("/assets", StaticFiles(directory=os.path.join(PROJECT_ROOT, "assets"))
 
 @app.get("/")
 def read_root():
-    return RedirectResponse(url="/static/index.html")
+    return RedirectResponse(url="/assets/html/index.html")
 
 def get_db():
     db = get_session()

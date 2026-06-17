@@ -38,15 +38,10 @@ The repository is organized into progressive modules and production subprojects:
 
 ## 🏆 Subprojects
 
-### FIFA World Cup 2026 Match Analytics Pipeline (`wc2026`)
-A fully automated data engineering and visualization pipeline built for the World Cup 2026 tournament.
-*   **Automatic Scraping**: Automatically fetches live match metadata, stats, lineups, and coordinate-level event data from FotMob and WhoScored.
-*   **High-Resolution Infographics**: Generates a publication-quality 4800x2800px (24" x 14") infographic dashboard showing pass networks, shot maps, zebra-striped stats comparisons, and final third entry vectors.
-*   **Git Publishing & Alerts**: Automatically pushes the generated images to a Git repository and fires WhatsApp notifications containing raw image links to match analysts.
-*   **Auto-Scheduler**: Includes PowerShell scripts to register Windows Task Scheduler jobs to automatically run tasks precisely at match-conclusion times.
-*   *See [wc2026/README.md](file:///c:/Users/puzik/BCNFINAL/wc2026/README.md) for full setup and automation guide.*
+*   **Barcelona Elite Analytics**
+    *   A web-based dashboard and API for analyzing Barcelona matches, passing networks, final third entries, and shot maps.
+    *   See [barcelona/README.md](file:///c:/Users/puzik/BCNFINAL/barcelona/README.md) (or equivalent/workspace files) for details.
 
----
 
 ## 🛠️ Installation & Setup
 
@@ -63,13 +58,8 @@ Ensure you have Python 3.10+ installed. It is recommended to use a virtual envir
     pip install -r requirements.txt
     ```
 
-3.  **Install Subproject Dependencies** (if running the WC2026 pipeline):
-    ```bash
-    pip install -r wc2026/requirements.txt
-    ```
-
-4.  **Configure Environment Variables**:
-    *   Copy `wc2026/.env.template` to `.env` in the root directory and populate your API tokens, Git credentials, and WhatsApp configurations.
+3.  **Configure Environment Variables**:
+    *   Set up your `.env` configuration file with appropriate credentials in the root directory (based on `.env.template`).
 
 ---
 
@@ -83,10 +73,7 @@ Most tutorial content is provided in **Jupyter Notebooks (`.ipynb`)**. To explor
     ```
 2.  Open the desired notebook (e.g., `3.2 Statsbomb API.ipynb`) and execute the cells.
 
-For running the automated match reporting CLI:
-```bash
-py -m wc2026.run_match --fotmob-id [MATCH_ID]
-```
+For running the Barcelona pipeline scripts, see the instructions in the `barcelona/` folder.
 
 ---
 
