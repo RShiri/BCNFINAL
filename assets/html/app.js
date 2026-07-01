@@ -507,6 +507,12 @@
           '<div class="sc-fill a" style="width:' + (100 - ap) + '%"></div></div></div>' +
           '<div class="sc-val' + (b > a ? " win" : "") + '">' + b + "</div></div>";
       }).join("");
+      // shot maps side by side
+      var sa = plShots(main), sb = plShots(cmp);
+      $("#plMapATitle").innerHTML = esc(main) + " &mdash; " + sa.length + " shots";
+      $("#plMapBTitle").innerHTML = esc(cmp) + " &mdash; " + sb.length + " shots";
+      pitchShotMap($("#plMapA"), sa);
+      pitchShotMap($("#plMapB"), sb);
       cmpCard.style.display = "";
     } else {
       cmpCard.style.display = "none";
