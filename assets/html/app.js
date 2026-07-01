@@ -449,7 +449,7 @@
   // Action maps: shots on a vertical HALF pitch (goal at top); the rest on the FULL pitch.
   var _gid = 0;
   var HPW = 68, HPH = 52;
-  function mapX(wy) { return wy / 100 * HPW; }
+  function mapX(wy) { return (100 - wy) / 100 * HPW; }
   function mapY(wx) { var v = (100 - wx) / 50; return Math.max(-1, Math.min(1.03, v)) * HPH; }
   function pitchHalf(inner) {
     var midx = HPW / 2, boxW = 40.3, boxD = 16.5, sixW = 18.32, sixD = 5.5, goalW = 7.32;
