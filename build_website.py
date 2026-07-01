@@ -66,12 +66,28 @@ def _event_stats(data):
 
     return out.get(hid, base()), out.get(aid, base())
 
-BCN_BLUE = "#004d98"
-BCN_RED  = "#a50044"
-BCN_GOLD = "#f5c518"
-DARK_BG  = "#0d0d1a"
-CARD_BG  = "#111128"
-BORDER   = "#1e1e4a"
+# ---------------------------------------------------------------------------
+# DESIGN TOKENS  – WC2026 dashboard theme (dark analytics, green/blue accents)
+# ---------------------------------------------------------------------------
+BG       = "#0b0f1a"   # page background
+BG2      = "#121829"   # inset / track background
+CARD_BG  = "#161d31"   # card surface
+CARD2    = "#1b2440"   # raised card / header strip
+BORDER   = "#26304d"   # hairlines
+TEXT     = "#e8edf7"   # primary text
+MUTED    = "#93a0bd"   # secondary text
+ACCENT   = "#3ddc97"   # green  – primary highlight / wins
+ACCENT2  = "#4ea1ff"   # blue   – secondary
+WARN     = "#ffb454"   # amber  – draws / xG
+BAD      = "#ff6b81"   # red    – losses
+SHADOW   = "0 8px 28px rgba(0,0,0,.35)"
+RADIUS   = "14px"
+DARK_BG  = BG
+
+# Legacy aliases (Barcelona highlight = green accent, away comparison = blue)
+BCN_BLUE = ACCENT      # Barcelona / home highlight
+BCN_RED  = ACCENT2     # away / opponent comparison
+BCN_GOLD = ACCENT
 
 # ---------------------------------------------------------------------------
 # COMPETITION DETECTION
@@ -240,38 +256,43 @@ def extract_plotly_body(path):
 # ---------------------------------------------------------------------------
 SHARED_CSS = f"""
 *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
-body{{font-family:'Inter',system-ui,sans-serif;background:{DARK_BG};color:#e0e0e0;line-height:1.5}}
+body{{font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
+  background:radial-gradient(1200px 600px at 80% -10%,#16203a 0%,{BG} 55%) fixed;
+  color:{TEXT};line-height:1.5;-webkit-font-smoothing:antialiased}}
 a{{color:inherit;text-decoration:none}}
 
-/* NAV */
-.nav{{display:flex;align-items:center;gap:20px;padding:14px 32px;
-  background:#08081a;border-bottom:1px solid {BORDER};position:sticky;top:0;z-index:100}}
-.nav-logo{{font-size:18px;font-weight:900;color:{BCN_GOLD};letter-spacing:-0.5px}}
-.nav-logo span{{color:{BCN_BLUE}}}
-.nav a{{font-size:13px;color:#9999cc;transition:color .2s}}
-.nav a:hover,.nav a.active{{color:#fff}}
+/* NAV / HEADER */
+.nav{{display:flex;align-items:center;gap:18px;padding:14px 24px;flex-wrap:wrap;
+  background:rgba(11,15,26,.82);backdrop-filter:blur(10px);
+  border-bottom:1px solid {BORDER};position:sticky;top:0;z-index:100}}
+.nav-logo{{font-size:20px;font-weight:800;color:{TEXT};letter-spacing:.2px}}
+.nav-logo span{{color:{ACCENT}}}
+.nav-sub{{font-size:12px;color:{MUTED};margin-top:2px}}
+.nav a{{font-size:13px;color:{MUTED};transition:color .2s}}
+.nav a:hover,.nav a.active{{color:{TEXT}}}
+.nav-right{{margin-left:auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}}
 
 /* CARDS */
-.card{{background:{CARD_BG};border:1px solid {BORDER};border-radius:12px;overflow:hidden;
-  transition:border-color .2s,box-shadow .2s}}
-.card:hover{{border-color:#4444aa;box-shadow:0 4px 30px #0000aa22}}
-.card-header{{padding:14px 20px;border-bottom:1px solid {BORDER};display:flex;align-items:center;gap:10px}}
+.card{{background:{CARD_BG};border:1px solid {BORDER};border-radius:{RADIUS};overflow:hidden;
+  box-shadow:{SHADOW};transition:border-color .15s,transform .1s,box-shadow .15s}}
+.card:hover{{border-color:{ACCENT}}}
+.card-header{{padding:14px 20px;border-bottom:1px solid {BORDER};display:flex;align-items:center;gap:10px;background:{CARD2}}}
 .dot{{width:10px;height:10px;border-radius:50%;flex-shrink:0}}
-.card-header h3{{font-size:13px;font-weight:600;letter-spacing:.5px;color:#ccccee}}
+.card-header h3{{font-size:13px;font-weight:700;letter-spacing:.4px;color:{TEXT}}}
 .card img{{width:100%;display:block}}
 
 /* RESULT BADGES */
-.badge-W{{background:#1a4a1a;color:#4caf50;border:1px solid #2e7d32}}
-.badge-D{{background:#2a2a1a;color:#ffc107;border:1px solid #f57f17}}
-.badge-L{{background:#4a1a1a;color:#ef5350;border:1px solid #b71c1c}}
+.badge-W{{background:rgba(61,220,151,.14);color:{ACCENT};border:1px solid rgba(61,220,151,.4)}}
+.badge-D{{background:rgba(255,180,84,.14);color:{WARN};border:1px solid rgba(255,180,84,.4)}}
+.badge-L{{background:rgba(255,107,129,.14);color:{BAD};border:1px solid rgba(255,107,129,.4)}}
 .badge{{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:1px}}
 
 /* COMP PILL */
-.pill{{display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600;letter-spacing:.5px}}
-.pill-liga{{background:#1a2a5a;color:#6699ff}}
-.pill-ucl{{background:#1a3a2a;color:#66cc88}}
-.pill-copa{{background:#3a1a3a;color:#cc66cc}}
-.pill-supercopa{{background:#3a2a1a;color:#ffaa44}}
+.pill{{display:inline-block;padding:2px 9px;border-radius:8px;font-size:10px;font-weight:700;letter-spacing:.5px}}
+.pill-liga{{background:rgba(78,161,255,.14);color:{ACCENT2}}}
+.pill-ucl{{background:rgba(61,220,151,.14);color:{ACCENT}}}
+.pill-copa{{background:rgba(197,122,255,.16);color:#c57aff}}
+.pill-supercopa{{background:rgba(255,180,84,.14);color:{WARN}}}
 
 /* TWO COL */
 .two-col{{display:grid;grid-template-columns:1fr 1fr;gap:20px}}
@@ -281,33 +302,34 @@ a{{color:inherit;text-decoration:none}}
 @media(max-width:600px){{.three-col{{grid-template-columns:1fr}}}}
 
 /* SECTION */
-.section{{padding:36px 28px;border-top:1px solid {BORDER}}}
-.sec-title{{font-size:18px;font-weight:700;color:#ccccee;margin-bottom:6px}}
-.sec-sub{{font-size:12px;color:#8888bb;margin-bottom:22px}}
+.section{{padding:34px 28px;border-top:1px solid {BORDER}}}
+.sec-title{{font-size:20px;font-weight:800;color:{TEXT};margin-bottom:6px}}
+.sec-sub{{font-size:13px;color:{MUTED};margin-bottom:22px;max-width:760px}}
 
-/* STAT BAR ROW */
+/* STAT COMPARISON BAR ROW */
 .stats-header{{display:flex;justify-content:space-between;padding:0 0 14px;border-bottom:1px solid {BORDER};margin-bottom:14px}}
 .stats-team-name{{font-size:13px;font-weight:800;letter-spacing:.5px}}
 .sr{{display:grid;grid-template-columns:70px 1fr 70px;align-items:center;gap:10px;margin-bottom:11px}}
-.sv{{font-size:15px;font-weight:800;text-align:center;line-height:1}}
-.sv.h{{color:{BCN_BLUE}}} .sv.a{{color:{BCN_RED};text-align:center}}
+.sv{{font-size:15px;font-weight:800;text-align:center;line-height:1;font-variant-numeric:tabular-nums}}
+.sv.h{{color:{ACCENT}}} .sv.a{{color:{ACCENT2};text-align:center}}
 .sb-wrap{{text-align:center}}
-.sb{{display:flex;height:6px;border-radius:4px;overflow:hidden;background:#1a1a3a;margin-bottom:5px}}
-.bh{{background:{BCN_BLUE};transition:width .6s}} .ba{{background:{BCN_RED};transition:width .6s}}
-.sl{{font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:#5555aa}}
+.sb{{display:flex;height:7px;border-radius:4px;overflow:hidden;background:{BG2};margin-bottom:5px}}
+.bh{{background:{ACCENT};transition:width .6s}} .ba{{background:{ACCENT2};transition:width .6s}}
+.sl{{font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:{MUTED}}}
 
-/* TABS */
-.tabs{{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}}
-.tab{{padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;
-  background:#111128;border:1px solid {BORDER};color:#9999cc;transition:all .2s}}
-.tab.active,.tab:hover{{background:{BCN_BLUE};border-color:{BCN_BLUE};color:#fff}}
+/* TABS / SEGMENTED CONTROLS */
+.tabs{{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}}
+.tab{{padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;
+  background:transparent;border:1px solid transparent;color:{MUTED};transition:all .15s ease}}
+.tab:hover{{color:{TEXT};background:{CARD_BG}}}
+.tab.active{{background:{ACCENT};border-color:{ACCENT};color:{BG};box-shadow:0 4px 14px rgba(61,220,151,.3)}}
 
 /* FOOTER */
-.footer{{text-align:center;padding:20px;font-size:11px;color:#333366;border-top:1px solid {BORDER}}}
+.footer{{text-align:center;padding:26px 20px;font-size:12px;color:{MUTED};border-top:1px solid {BORDER}}}
 
 /* Force embedded Plotly charts to fill width.
    The pitch itself stays proportional via the figure's yaxis scaleanchor,
-   so width:100% here only changes the surrounding green letterbox, not the
+   so width:100% here only changes the surrounding letterbox, not the
    pitch shape. */
 .js-plotly-plot,.plot-container,.plotly{{width:100%!important}}
 .js-plotly-plot .main-svg{{width:100%!important}}
@@ -318,12 +340,27 @@ a{{color:inherit;text-decoration:none}}
 # ---------------------------------------------------------------------------
 def build_index(matches):
     # Season aggregates for Barcelona
+    n      = len(matches)
     w = sum(1 for m in matches if m["result"] == "W")
     d = sum(1 for m in matches if m["result"] == "D")
     l = sum(1 for m in matches if m["result"] == "L")
     gf = sum(m["bcn_goals"] for m in matches)
     ga = sum(m["opp_goals"] for m in matches)
-    avg_xg = round(sum(m["bcn_xg"] for m in matches if m["bcn_xg"]) / max(sum(1 for m in matches if m["bcn_xg"]), 1), 2)
+    gd = gf - ga
+    n_xg   = sum(1 for m in matches if m["bcn_xg"])
+    avg_xg = round(sum(m["bcn_xg"] for m in matches if m["bcn_xg"]) / max(n_xg, 1), 2)
+    xg_for = round(sum(m["bcn_xg"] for m in matches), 1)
+    xg_ag  = round(sum(m["opp_xg"] for m in matches), 1)
+    clean  = sum(1 for m in matches if m["opp_goals"] == 0)
+    win_pct = round(100 * w / n) if n else 0
+    ppg    = round((3 * w + d) / n, 2) if n else 0
+    # Recent form (most recent first)
+    form   = [m["result"] for m in matches[-8:]][::-1]
+
+    n_liga  = sum(1 for m in matches if m['comp'] == 'La Liga')
+    n_ucl   = sum(1 for m in matches if m['comp'] == 'UCL')
+    n_copa  = sum(1 for m in matches if m['comp'] == 'Copa')
+    n_super = sum(1 for m in matches if m['comp'] == 'Supercopa')
 
     def comp_pill(comp):
         cls = {"La Liga": "liga", "UCL": "ucl", "Copa": "copa", "Supercopa": "supercopa"}.get(comp, "liga")
@@ -333,17 +370,41 @@ def build_index(matches):
     def result_badge(r):
         return f'<span class="badge badge-{r}">{r}</span>'
 
+    def gd_str(v):
+        return f"+{v}" if v > 0 else str(v)
+
+    def stat_card(val, key, cls=""):
+        return f'<div class="stat"><div class="v {cls}">{val}</div><div class="k">{key}</div></div>'
+
+    stats_strip = "".join([
+        stat_card(w, "Wins", "accent"),
+        stat_card(d, "Draws", "warn"),
+        stat_card(l, "Losses", "bad"),
+        stat_card(f"{win_pct}%", "Win Rate"),
+        stat_card(ppg, "Points / Game", "accent"),
+        stat_card(gf, "Goals For"),
+        stat_card(ga, "Goals Against"),
+        stat_card(gd_str(gd), "Goal Diff", "accent" if gd >= 0 else "bad"),
+        stat_card(clean, "Clean Sheets", "blue"),
+        stat_card(avg_xg, "Avg xG / Game", "warn"),
+        stat_card(f"{xg_for}", "Total xG For", "accent"),
+        stat_card(f"{xg_ag}", "Total xG Against", "bad"),
+        stat_card(n, "Matches"),
+    ])
+
+    form_chips = "".join(f'<span class="form-chip fc-{r}" title="{r}">{r}</span>' for r in form)
+
     def match_card(m):
         score = f"{m['home_score']} – {m['away_score']}"
         is_home = m["bcn_is_home"]
-        home_cls = f"color:{BCN_BLUE};font-weight:700" if is_home else ""
-        away_cls = f"color:{BCN_BLUE};font-weight:700" if not is_home else ""
-        result_color = {"W": "#4caf50", "D": "#ffc107", "L": "#ef5350"}[m["result"]]
+        home_cls = f"color:{ACCENT};font-weight:700" if is_home else f"color:{TEXT}"
+        away_cls = f"color:{ACCENT};font-weight:700" if not is_home else f"color:{TEXT}"
+        edge = {"W": ACCENT, "D": WARN, "L": BAD}[m["result"]]
         return f"""
-<a href="match_{m['mid']}.html" class="match-card card" data-comp="{m['comp']}">
+<a href="match_{m['mid']}.html" class="match-card card" data-comp="{m['comp']}" style="box-shadow:inset 3px 0 0 {edge},{SHADOW}">
   <div style="padding:14px 18px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <span style="font-size:11px;color:#666699">{m['date']}</span>
+      <span style="font-size:11px;color:{MUTED}">{m['date']}</span>
       <div style="display:flex;gap:6px;align-items:center">
         {comp_pill(m['comp'])}
         {result_badge(m['result'])}
@@ -351,13 +412,12 @@ def build_index(matches):
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
       <span style="font-size:14px;flex:1;{home_cls}">{m['home']}</span>
-      <span style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-1px;min-width:60px;text-align:center;
-        text-shadow:0 0 20px {result_color}55">{score}</span>
+      <span style="font-size:22px;font-weight:900;color:{TEXT};letter-spacing:-1px;min-width:60px;text-align:center">{score}</span>
       <span style="font-size:14px;flex:1;text-align:right;{away_cls}">{m['away']}</span>
     </div>
-    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:#666699">
-      <span>xG {m['xg_h']:.2f} – {m['xg_a']:.2f}</span>
-      <span style="color:#555588">{m.get('venue','')[:30]}</span>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:{MUTED}">
+      <span>xG <b style="color:{WARN}">{m['xg_h']:.2f}</b> – <b style="color:{WARN}">{m['xg_a']:.2f}</b></span>
+      <span>{m.get('venue','')[:30]}</span>
     </div>
   </div>
 </a>"""
@@ -370,78 +430,85 @@ def build_index(matches):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FC Barcelona – 2025/26 Season Analytics</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 <style>
 {SHARED_CSS}
 
 /* INDEX SPECIFIC */
-.hero{{background:linear-gradient(135deg,#08081a 0%,#0f0f2e 40%,#08081a 100%);
-  border-bottom:1px solid {BORDER};padding:48px 32px 36px;text-align:center}}
-.hero-badge{{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#6666aa;margin-bottom:16px}}
-.hero-title{{font-size:42px;font-weight:900;letter-spacing:-1.5px;margin-bottom:6px}}
-.hero-title span{{color:{BCN_GOLD}}}
-.hero-sub{{font-size:14px;color:#6666aa}}
+main{{max-width:1180px;margin:0 auto;padding:26px 20px 40px}}
+.section-head{{margin:4px 0 18px}}
+.section-head h2{{margin:0;font-size:22px;font-weight:800}}
+.section-head p{{margin:6px 0 0;color:{MUTED};font-size:14px;max-width:760px}}
 
-.record-bar{{display:flex;justify-content:center;gap:32px;padding:24px 32px;
-  background:#080818;border-bottom:1px solid {BORDER};flex-wrap:wrap}}
-.rec-item{{text-align:center}}
-.rec-val{{font-size:28px;font-weight:900;color:#fff}}
-.rec-lbl{{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#555588;margin-top:2px}}
+.stats-strip{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:22px}}
+.stat{{background:linear-gradient(180deg,{CARD2},{CARD_BG});border:1px solid {BORDER};
+  border-radius:{RADIUS};padding:16px 18px;box-shadow:{SHADOW}}}
+.stat .v{{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}}
+.stat .k{{color:{MUTED};font-size:12px;margin-top:4px;text-transform:uppercase;letter-spacing:.6px}}
+.stat .v.accent{{color:{ACCENT}}} .stat .v.blue{{color:{ACCENT2}}}
+.stat .v.warn{{color:{WARN}}} .stat .v.bad{{color:{BAD}}}
 
-.matches-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;
-  padding:28px 28px;max-width:1400px;margin:0 auto}}
-.match-card{{transition:transform .15s,box-shadow .15s}}
-.match-card:hover{{transform:translateY(-2px);box-shadow:0 8px 40px #00008844}}
+.form-wrap{{display:flex;align-items:center;gap:12px;margin-bottom:26px;flex-wrap:wrap}}
+.form-label{{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:{MUTED}}}
+.form-chip{{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;
+  border-radius:7px;font-size:12px;font-weight:800}}
+.fc-W{{background:rgba(61,220,151,.16);color:{ACCENT};border:1px solid rgba(61,220,151,.4)}}
+.fc-D{{background:rgba(255,180,84,.16);color:{WARN};border:1px solid rgba(255,180,84,.4)}}
+.fc-L{{background:rgba(255,107,129,.16);color:{BAD};border:1px solid rgba(255,107,129,.4)}}
+
+.matches-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}}
+.match-card{{transition:transform .1s,border-color .15s}}
+.match-card:hover{{transform:translateY(-2px);border-color:{ACCENT}}}
 .match-card.hidden{{display:none}}
-
-.filter-bar{{display:flex;gap:10px;padding:24px 28px 0;max-width:1400px;margin:0 auto;flex-wrap:wrap}}
 </style>
 </head>
 <body>
 
 <nav class="nav">
-  <div class="nav-logo">BCN<span>Analytics</span></div>
-  <a href="index.html" class="active">Season</a>
-  <span style="color:#333355;font-size:18px">|</span>
-  <span style="font-size:12px;color:#555577">2025/26 · {len(matches)} matches</span>
+  <div>
+    <div class="nav-logo">FC <span>Barcelona</span> · Analytics</div>
+    <div class="nav-sub">2025/26 · La Liga · Copa del Rey · Champions League · {n} matches</div>
+  </div>
+  <div class="nav-right">
+    <button class="tab active" onclick="filterComp('all',this)">All ({n})</button>
+    <button class="tab" onclick="filterComp('La Liga',this)">La Liga ({n_liga})</button>
+    <button class="tab" onclick="filterComp('UCL',this)">Champions League ({n_ucl})</button>
+    <button class="tab" onclick="filterComp('Copa',this)">Copa del Rey ({n_copa})</button>
+    <button class="tab" onclick="filterComp('Supercopa',this)">Supercopa ({n_super})</button>
+  </div>
 </nav>
 
-<div class="hero">
-  <div class="hero-badge">2025 / 26 Season Dashboard</div>
-  <div class="hero-title">FC <span>Barcelona</span></div>
-  <div class="hero-sub">La Liga · Copa del Rey · Champions League</div>
-</div>
+<main>
+  <div class="section-head">
+    <h2>Season Overview</h2>
+    <p>Every FC Barcelona fixture of the 2025/26 campaign across all competitions, with the underlying
+       expected-goals numbers. Tap any match for its full shot maps, passing networks and stat line.</p>
+  </div>
 
-<div class="record-bar">
-  <div class="rec-item"><div class="rec-val" style="color:#4caf50">{w}</div><div class="rec-lbl">Wins</div></div>
-  <div class="rec-item"><div class="rec-val" style="color:#ffc107">{d}</div><div class="rec-lbl">Draws</div></div>
-  <div class="rec-item"><div class="rec-val" style="color:#ef5350">{l}</div><div class="rec-lbl">Losses</div></div>
-  <div class="rec-item" style="border-left:1px solid {BORDER};padding-left:32px">
-    <div class="rec-val">{gf}</div><div class="rec-lbl">Goals For</div></div>
-  <div class="rec-item"><div class="rec-val">{ga}</div><div class="rec-lbl">Goals Against</div></div>
-  <div class="rec-item" style="border-left:1px solid {BORDER};padding-left:32px">
-    <div class="rec-val" style="color:{BCN_GOLD}">{avg_xg}</div><div class="rec-lbl">Avg xG/game</div></div>
-  <div class="rec-item"><div class="rec-val">{len(matches)}</div><div class="rec-lbl">Matches</div></div>
-</div>
+  <div class="stats-strip">
+{stats_strip}
+  </div>
 
-<div class="filter-bar">
-  <button class="tab active" onclick="filter('all')">All ({len(matches)})</button>
-  <button class="tab" onclick="filter('La Liga')">La Liga ({sum(1 for m in matches if m['comp']=='La Liga')})</button>
-  <button class="tab" onclick="filter('UCL')">Champions League ({sum(1 for m in matches if m['comp']=='UCL')})</button>
-  <button class="tab" onclick="filter('Copa')">Copa del Rey ({sum(1 for m in matches if m['comp']=='Copa')})</button>
-  <button class="tab" onclick="filter('Supercopa')">Supercopa ({sum(1 for m in matches if m['comp']=='Supercopa')})</button>
-</div>
+  <div class="form-wrap">
+    <span class="form-label">Recent form</span>
+    {form_chips}
+  </div>
 
-<div class="matches-grid" id="grid">
+  <div class="section-head">
+    <h2>Matches</h2>
+    <p>Filter by competition using the tabs above. Barcelona highlighted in <b style="color:{ACCENT}">green</b>.</p>
+  </div>
+
+  <div class="matches-grid" id="grid">
 {cards_html}
-</div>
+  </div>
+</main>
 
 <div class="footer">BCNProject Analytics · WhoScored + Understat data · 2025/26</div>
 
 <script>
-function filter(comp) {{
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
+function filterComp(comp, btn) {{
+  document.querySelectorAll('.nav-right .tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
   document.querySelectorAll('.match-card').forEach(c => {{
     if (comp === 'all' || c.dataset.comp === comp) c.classList.remove('hidden');
     else c.classList.add('hidden');
@@ -461,9 +528,9 @@ def build_match_page(m, prev_mid, next_mid):
     hs  = m["home_score"]; aws = m["away_score"]
     is_home = m["bcn_is_home"]
 
-    home_col = BCN_BLUE if is_home else "#888888"
-    away_col = BCN_BLUE if not is_home else "#888888"
-    opp_col  = "#888888"
+    home_col = BCN_BLUE if is_home else MUTED
+    away_col = BCN_BLUE if not is_home else MUTED
+    opp_col  = MUTED
     bcn_col  = BCN_BLUE
 
     comp_label = m["comp"]
@@ -535,12 +602,12 @@ def build_match_page(m, prev_mid, next_mid):
     )
 
     # nav links
-    prev_link = f'<a href="match_{prev_mid}.html" style="color:#8888bb">← Prev</a>' if prev_mid else ""
-    next_link = f'<a href="match_{next_mid}.html" style="color:#8888bb">Next →</a>' if next_mid else ""
+    prev_link = f'<a href="match_{prev_mid}.html">← Prev</a>' if prev_mid else "<span></span>"
+    next_link = f'<a href="match_{next_mid}.html">Next →</a>' if next_mid else "<span></span>"
 
     def img_card(title, b64, color):
         if not b64:
-            return f'<div class="card" style="padding:32px;text-align:center;color:#555577">{title}<br><small>No data</small></div>'
+            return f'<div class="card" style="padding:32px;text-align:center;color:{MUTED}">{title}<br><small>No data</small></div>'
         return f"""<div class="card">
   <div class="card-header"><div class="dot" style="background:{color}"></div><h3>{title}</h3></div>
   <img src="{b64}" alt="{title}" loading="lazy">
@@ -580,41 +647,41 @@ def build_match_page(m, prev_mid, next_mid):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{hn} {hs}–{aws} {an} | BCNAnalytics</title>
+<title>{hn} {hs}–{aws} {an} | BCN Analytics</title>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 <style>
 {SHARED_CSS}
 
-.hdr{{background:linear-gradient(135deg,#08081a 0%,#111130 60%,#08081a 100%);
-  border-bottom:1px solid {BORDER};padding:28px 32px 20px;text-align:center}}
-.match-label{{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#6666aa;margin-bottom:12px}}
+.hdr{{background:radial-gradient(900px 400px at 50% -40%,#16203a 0%,{BG} 70%);
+  border-bottom:1px solid {BORDER};padding:30px 32px 24px;text-align:center}}
+.match-label{{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:{MUTED};margin-bottom:12px}}
 .scoreline{{display:flex;align-items:center;justify-content:center;gap:24px;margin:10px 0}}
 .tn{{font-size:22px;font-weight:900;min-width:180px}}
 .tn.h{{color:{home_col};text-align:right}}
 .tn.a{{color:{away_col};text-align:left}}
-.sc{{font-size:48px;font-weight:900;color:#fff;letter-spacing:-2px;
-  text-shadow:0 0 40px {result_color}44}}
-.meta{{font-size:11px;color:#555577;margin-top:8px}}
+.sc{{font-size:48px;font-weight:900;color:{TEXT};letter-spacing:-2px;font-variant-numeric:tabular-nums;
+  text-shadow:0 0 40px {result_color}55}}
+.meta{{font-size:12px;color:{MUTED};margin-top:8px}}
 
 .stats-box{{max-width:760px;margin:0 auto;padding:28px 28px}}
 
-.page-inner{{max-width:1400px;margin:0 auto}}
+.page-inner{{max-width:1180px;margin:0 auto}}
 
-.match-nav{{display:flex;justify-content:space-between;padding:12px 32px;
+.match-nav{{display:flex;justify-content:space-between;align-items:center;padding:12px 24px;
   border-bottom:1px solid {BORDER};font-size:13px}}
+.match-nav a{{color:{MUTED};transition:color .15s}} .match-nav a:hover{{color:{ACCENT}}}
 </style>
 </head>
 <body>
 
 <nav class="nav">
-  <div class="nav-logo">BCN<span>Analytics</span></div>
-  <a href="index.html">← Season</a>
+  <div class="nav-logo">FC <span>Barcelona</span> · Analytics</div>
+  <div class="nav-right"><a href="index.html">← Back to Season</a></div>
 </nav>
 
 <div class="match-nav">
   {prev_link}
-  <span style="font-size:12px;color:#555577">{m['date']} · {comp_label}</span>
+  <span style="font-size:12px;color:{MUTED}">{m['date']} · {comp_label}</span>
   {next_link}
 </div>
 
@@ -632,7 +699,7 @@ def build_match_page(m, prev_mid, next_mid):
 <!-- STATS -->
 <div class="stats-box">
   <div style="text-align:center;margin-bottom:16px">
-    <span style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6666aa">Match Statistics</span>
+    <span style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:{MUTED}">Match Statistics</span>
   </div>
   <div class="stats-header">
     <span class="stats-team-name" style="color:{home_col}">{hn}</span>
@@ -648,17 +715,17 @@ def build_match_page(m, prev_mid, next_mid):
   <div class="sec-title">🎯 Shot Maps</div>
   <div class="sec-sub">Dot size = xG · ★ = Goal · Hover for player, minute, xG, zone · {hn} attacks → &nbsp;|&nbsp; {an} attacks ←</div>
 
-  <div style="margin-bottom:10px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6666aa">
+  <div style="margin-bottom:10px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:{MUTED}">
     WhoScored xG Model
   </div>
-  <div style="border-radius:12px;overflow:hidden;border:1px solid {BORDER};background:#1a1a2e;margin-bottom:28px;width:100%">
+  <div style="border-radius:12px;overflow:hidden;border:1px solid {BORDER};background:{BG2};margin-bottom:28px;width:100%">
     {shotmap_ws_body}
   </div>
 
-  <div style="margin-bottom:10px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6666aa">
+  <div style="margin-bottom:10px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:{MUTED}">
     Understat xG Model
   </div>
-  <div style="border-radius:12px;overflow:hidden;border:1px solid {BORDER};background:#1a1a2e;width:100%">
+  <div style="border-radius:12px;overflow:hidden;border:1px solid {BORDER};background:{BG2};width:100%">
     {shotmap_us_body}
   </div>
 </div>
@@ -687,11 +754,11 @@ def build_match_page(m, prev_mid, next_mid):
   <div class="two-col">
     <div class="card">
       <div class="card-header"><div class="dot" style="background:{home_col}"></div><h3>{hn} Take-Ons</h3></div>
-      <div style="background:#0d0d1a">{h_drib_body}</div>
+      <div style="background:{BG2}">{h_drib_body}</div>
     </div>
     <div class="card">
       <div class="card-header"><div class="dot" style="background:{away_col}"></div><h3>{an} Take-Ons</h3></div>
-      <div style="background:#0d0d1a">{a_drib_body}</div>
+      <div style="background:{BG2}">{a_drib_body}</div>
     </div>
   </div>
 </div>
