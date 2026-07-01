@@ -847,22 +847,40 @@ def build_match_detail(m, d):
             "min": ev.get("minute"), "sec": ev.get("second"),
             "prog": bool(ok and (ex - x) >= 15 and ex >= 50),
             "key": "KeyPass" in qs, "assist": "IntentionalGoalAssist" in qs, "cross": "Cross" in qs,
+            "through": "Throughball" in qs,
         })
 
     # ---- dribbles (take-ons) ----
     dribbles = []
-    for ev in events:
+    for i, ev in enumerate(events):
         if ev.get("type", {}).get("displayName") != "TakeOn":
             continue
         side = sd(ev.get("teamId"))
         if not side:
             continue
-        dribbles.append({
+        dx = round(ev.get("x", 0) or 0, 1)
+        dy = round(ev.get("y", 0) or 0, 1)
+        d_entry = {
             "team": side, "player": pid2name.get(ev.get("playerId"), ""),
-            "x": round(ev.get("x", 0) or 0, 1), "y": round(ev.get("y", 0) or 0, 1),
+            "x": dx, "y": dy,
             "ok": ev.get("outcomeType", {}).get("displayName") == "Successful",
             "min": ev.get("minute"), "sec": ev.get("second"),
-        })
+        }
+        # The feed gives no end coord for a take-on, so the carry destination is the same
+        # player's next on-ball touch within ~7s. Powers the dribble carry arrow (matches
+        # the WC builder's data contract that match.js expects via d.ex/d.ey).
+        pid = ev.get("playerId")
+        t0 = (ev.get("minute") or 0) * 60 + (ev.get("second") or 0)
+        for nxt in events[i + 1:]:
+            if (nxt.get("minute") or 0) * 60 + (nxt.get("second") or 0) - t0 > 7:
+                break
+            if nxt.get("playerId") == pid and nxt.get("x") is not None:
+                nx = nxt.get("x"); ny = nxt.get("y") or 0
+                if abs(nx - dx) > 0.8 or abs(ny - dy) > 0.8:
+                    d_entry["ex"] = round(nx, 1)
+                    d_entry["ey"] = round(ny, 1)
+                break
+        dribbles.append(d_entry)
 
     # ---- goals ----
     goals = []
@@ -878,10 +896,17 @@ def build_match_detail(m, d):
             pe = events[j]
             if pe.get("teamId") == ev.get("teamId") and "IntentionalGoalAssist" in _qset(pe):
                 assist = pid2name.get(pe.get("playerId"), ""); break
-        goals.append({
+        grec = {
             "team": gteam, "min": ev.get("minute"), "scorer": pid2name.get(ev.get("playerId"), ""),
             "assist": assist, "pen": "Penalty" in qs, "own": own,
-        })
+        }
+        if own:
+            # mirror 180° into the beneficiary's attacking frame so the own-goal replay /
+            # all-goals map draws at the end they attacked (matches the WC builder; match.js
+            # skips own-goal replays when g.x is absent).
+            grec["x"] = round(100 - (ev.get("x") or 0), 1)
+            grec["y"] = round(100 - (ev.get("y") or 0), 1)
+        goals.append(grec)
 
     # ---- saves ----
     saves = []
@@ -892,6 +917,7 @@ def build_match_detail(m, d):
         if not side:
             continue
         saves.append({"team": side, "min": ev.get("minute"), "sec": ev.get("second"),
+                      "player": pid2name.get(ev.get("playerId"), ""),
                       "x": round(ev.get("x", 0) or 0, 1), "y": round(ev.get("y", 0) or 0, 1)})
 
     # ---- line-ups ----
