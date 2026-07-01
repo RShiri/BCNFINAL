@@ -446,12 +446,12 @@
     }).join("");
   }
 
-  // Vertical half-pitch, attacking UP (goal at the top). WhoScored coords 0-100.
+  // Action maps: shots on a vertical HALF pitch (goal at top); the rest on the FULL pitch.
   var _gid = 0;
   var HPW = 68, HPH = 52;
-  function mapX(wy) { return wy / 100 * HPW; }                       // pitch width -> svg x
-  function mapY(wx) { var v = (100 - wx) / 50; return Math.max(-1, Math.min(1.03, v)) * HPH; } // length -> svg y (goal at top)
-  function pitchWrap(inner) {
+  function mapX(wy) { return wy / 100 * HPW; }
+  function mapY(wx) { var v = (100 - wx) / 50; return Math.max(-1, Math.min(1.03, v)) * HPH; }
+  function pitchHalf(inner) {
     var midx = HPW / 2, boxW = 40.3, boxD = 16.5, sixW = 18.32, sixD = 5.5, goalW = 7.32;
     var s = '<svg viewBox="-1 -3 ' + (HPW + 2) + ' ' + (HPH + 5) + '" width="100%" style="display:block;background:#101a2e;border-radius:6px">';
     s += '<rect x="0.3" y="0.3" width="' + (HPW - 0.6) + '" height="' + (HPH - 0.6) + '" fill="none" stroke="#26304d" stroke-width="0.4"/>';
@@ -460,8 +460,16 @@
     s += '<rect x="' + (midx - goalW / 2).toFixed(1) + '" y="-1.6" width="' + goalW + '" height="1.6" fill="none" stroke="#43e8a0" stroke-width="0.5"/>';
     s += '<circle cx="' + midx + '" cy="11" r="0.5" fill="#26304d"/>';
     s += '<path d="M ' + (midx - 7.3) + ' ' + boxD + ' A 9.15 9.15 0 0 0 ' + (midx + 7.3) + ' ' + boxD + '" fill="none" stroke="#26304d" stroke-width="0.4"/>';
-    s += inner + '</svg>';
-    return s;
+    return s + inner + '</svg>';
+  }
+  function pitchFull(inner) {
+    return '<svg viewBox="0 0 100 64" width="100%" style="display:block;background:#101a2e;border-radius:6px">' +
+      '<rect x="0.4" y="0.4" width="99.2" height="63.2" fill="none" stroke="#26304d" stroke-width="0.4"/>' +
+      '<line x1="50" y1="0" x2="50" y2="64" stroke="#26304d" stroke-width="0.4"/>' +
+      '<circle cx="50" cy="32" r="7" fill="none" stroke="#26304d" stroke-width="0.4"/>' +
+      '<rect x="83" y="18" width="17" height="28" fill="none" stroke="#26304d" stroke-width="0.4"/>' +
+      '<rect x="0" y="18" width="17" height="28" fill="none" stroke="#26304d" stroke-width="0.4"/>' +
+      inner + '</svg>';
   }
   function playerGraph(host, events, kind, color) {
     if (!host) return;
@@ -472,19 +480,21 @@
     }
     var gid = "g" + (_gid++);
     var DOT = " - ", GREEN = "#43e8a0", RED = "#ff5e7a";
+    var half = kind === "shots";
     function di(t) { return ' data-info="' + esc(t) + '"'; }
     function gmOf(e) { var g = PGAMES[e[e.length - 1]]; return g ? (DOT + "vs " + g[0]) : ""; }
+    function pt(wx, wy) { return half ? [mapX(wy), mapY(wx)] : [wx, 64 - wy * 0.64]; }
     var s = '<defs>' +
       '<marker id="' + gid + 'g" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4 Z" fill="' + GREEN + '"/></marker>' +
       '<marker id="' + gid + 'r" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4 Z" fill="' + RED + '"/></marker>' +
       '</defs>';
     if (kind === "shots") {
       events.forEach(function (e) { // [x,y,gy,xg,goal,ot,min,gi]
-        var cx = mapX(e[1]), cy = mapY(e[0]), gx = mapX(e[2]), gyy = mapY(100);
+        var a = pt(e[0], e[1]), cx = a[0], cy = a[1];
+        var b = pt(100, e[2]), gx = b[0], gyy = b[1];
         var xg = e[3], goal = e[4], ot = e[5];
         var r = 0.6 + Math.sqrt(xg) * 2.4;
-        var col = goal ? GREEN : RED;
-        var solid = goal || ot;
+        var col = goal ? GREEN : RED, solid = goal || ot;
         var outcome = goal ? "GOAL" : ot ? "On target" : "Off target / blocked";
         var info = e[6] + "' " + DOT + "xG " + xg.toFixed(2) + DOT + outcome + gmOf(e);
         s += '<line x1="' + cx.toFixed(1) + '" y1="' + cy.toFixed(1) + '" x2="' + gx.toFixed(1) + '" y2="' + gyy.toFixed(1) +
@@ -494,35 +504,35 @@
       });
     } else if (kind === "tackles") {
       events.forEach(function (e) { // [x,y,ok,min,gi]
-        var cx = mapX(e[1]), cy = mapY(e[0]), col = e[2] ? GREEN : RED;
+        var a = pt(e[0], e[1]), cx = a[0], cy = a[1], col = e[2] ? GREEN : RED;
         var info = e[3] + "' " + DOT + "Tackle " + (e[2] ? "won" : "lost") + gmOf(e);
-        s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="1.3" fill="' + (e[2] ? col : "none") +
+        s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="1.1" fill="' + (e[2] ? col : "none") +
           '" fill-opacity="0.85" stroke="' + col + '" stroke-width="0.4"' + di(info) + '/>';
       });
-    } else { // dribbles / passes / prog
+    } else { // dribbles / passes / prog on the full pitch (attacking right)
       events.forEach(function (e) {
-        var cx = mapX(e[1]), cy = mapY(e[0]), ok, ex, ey, prog = 0, mn, info;
+        var a = pt(e[0], e[1]), cx = a[0], cy = a[1], ok, ex, ey, prog = 0, mn, info, b;
         if (kind === "dribbles") {
           ok = e[4]; mn = e[5];
           info = mn + "' " + DOT + "Take-on " + (ok ? "won" : "lost") + gmOf(e);
           if (e[2] < 0) {
             var c0 = ok ? GREEN : RED;
-            s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="1.1" fill="' + (ok ? c0 : "none") +
+            s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="0.9" fill="' + (ok ? c0 : "none") +
               '" stroke="' + c0 + '" stroke-width="0.4"' + di(info) + '/>'; return;
           }
-          ex = mapX(e[3]); ey = mapY(e[2]);
+          b = pt(e[2], e[3]); ex = b[0]; ey = b[1];
         } else {
-          ex = mapX(e[3]); ey = mapY(e[2]); ok = e[4]; prog = kind === "prog" ? 1 : e[5]; mn = e[6];
+          b = pt(e[2], e[3]); ex = b[0]; ey = b[1]; ok = e[4]; prog = kind === "prog" ? 1 : e[5]; mn = e[6];
           info = mn + "' " + DOT + (ok ? "Complete" : "Incomplete") + (prog ? DOT + "progressive" : "") + gmOf(e);
         }
         var col = ok ? ((prog || kind === "prog" || kind === "dribbles") ? GREEN : "#1f9d5e") : RED;
         var mk = "url(#" + gid + (ok ? "g" : "r") + ")";
         s += '<line x1="' + cx.toFixed(1) + '" y1="' + cy.toFixed(1) + '" x2="' + ex.toFixed(1) + '" y2="' + ey.toFixed(1) +
-          '" stroke="' + col + '" stroke-width="' + (prog || kind === "prog" ? 0.5 : 0.3) +
+          '" stroke="' + col + '" stroke-width="' + (prog || kind === "prog" ? 0.45 : 0.28) +
           '" stroke-opacity="0.72"' + (ok ? "" : ' stroke-dasharray="0.9 0.9"') + ' marker-end="' + mk + '"' + di(info) + '/>';
       });
     }
-    host.innerHTML = pitchWrap(s);
+    host.innerHTML = (half ? pitchHalf(s) : pitchFull(s));
     if (!host._hooked) {
       host._hooked = 1;
       host.addEventListener("pointermove", function (ev) {
