@@ -2,6 +2,25 @@
 
 Welcome to the **Complete Football Analytics** repository! This project is a comprehensive resource for learning and applying data science and machine learning techniques specifically to football (soccer) data. It covers everything from Python basics to advanced web scraping, data visualization, and predictive modeling.
 
+## ⚽ FC Barcelona 2025/26 Dashboard (live)
+
+**➡️ https://rshiri.github.io/BCNFINAL/**
+
+A World-Cup-2026-style single-page dashboard for FC Barcelona's 2025/26 season, built from
+scraped WhoScored + Understat data. Tabs: **Overview · Matches · Players · xG Lab · Player
+Lab · Shot Maps · Data**. Click any match for the interactive **Match Centre** — xG momentum,
+SVG shot map, on-target goal-mouth view, pass explorer, dribbles, pass network, average
+positions, line-ups, all-goals map and goal replays. All SVG, no images.
+
+| Command | Does |
+|---------|------|
+| `py build_dashboard.py` | rebuild the whole site into `assets/html/` |
+| `py bcn_pipeline.py` | scrape new matches → rebuild → publish |
+| `py bcn_pipeline.py --no-scrape` | rebuild + publish only |
+
+The built site (`assets/html/`) is deployed to the **`gh-pages`** branch. See
+[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for architecture, data model and deploy details.
+
 ## 📂 Repository Structure
 
 The repository is organized into progressive modules, taking you from a beginner level to building complex analytics projects.

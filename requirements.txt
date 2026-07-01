@@ -7,3 +7,7 @@ matplotlib==3.8.2
 mplsoccer==1.2.2
 plotly
 python-multipart
+requests-oauthlib
+python-dotenv
+beautifulsoup4
+undetected-chromedriver
