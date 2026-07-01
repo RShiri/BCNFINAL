@@ -203,10 +203,25 @@
 
     <div class="card full-card">
       <h3>Style fingerprint</h3>
-      <p class="hint">Each spoke is a <b>percentile</b> versus the rest of the squad (further out = more of
-         that trait). Comparing overlays a second player.</p>
+      <p class="hint">Each spoke is the player's <b>percentile rank</b> among squad players with 120+ minutes,
+         measured <b>per 90 minutes</b> (Rating is the raw average). Further out = higher in the squad;
+         100 = the best. Comparing overlays a second player. Hover a point for the exact value.</p>
       <div class="so-radar-wrap" id="plRadar"></div>
       <div class="tl-legend" id="plRadarLegend"></div>
+      <div class="hint" style="margin-top:12px;line-height:1.7">
+        <b>What each spoke means</b>
+        <ul style="margin:6px 0 0;padding-left:18px">
+          <li><b>Finishing</b> &mdash; goals per 90</li>
+          <li><b>G+A</b> &mdash; goals + assists per 90</li>
+          <li><b>Shooting</b> &mdash; shots per 90</li>
+          <li><b>Creativity</b> &mdash; <b>key passes</b> per 90 &mdash; passes that directly set up a shot
+             (the last pass before a teammate's attempt), per WhoScored</li>
+          <li><b>Dribbling</b> &mdash; take-ons won per 90</li>
+          <li><b>Defending</b> &mdash; tackles + interceptions per 90</li>
+          <li><b>Aerials</b> &mdash; aerial duels won per 90</li>
+          <li><b>Rating</b> &mdash; average WhoScored match rating (percentile of the raw value)</li>
+        </ul>
+      </div>
     </div>
   </section>
 
