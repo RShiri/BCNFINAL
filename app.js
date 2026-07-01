@@ -3,12 +3,13 @@
 (function () {
   "use strict";
   var D = window.DATA || {};
-  var M = D.matches || [];
-  var P = D.players || [];
-  var T = D.totals || {};
-  var SHOTS = D.playerShots || {};
-  var PEV = window.PLAYER_EVENTS || {};
-  var PGAMES = PEV._games || [];
+  var ALLM = D.matches || [];              // every match (all seasons), each tagged m.season
+  var ALLSHOTS = D.playerShots || {};      // global player shots (each shot carries a date)
+  var ALLEV = window.PLAYER_EVENTS || {};  // global player events (_games[gi] = [opp,date,season])
+  var SEASONS = D.seasons || {};           // season key -> {totals, byComp, players}
+  var ACTIVE = D.defaultSeason || "all";
+  // active-season slices — set by applySeason() and read by every render function.
+  var M = [], P = [], T = {}, SHOTS = {}, PEV = {}, PGAMES = [];
 
   var ACC = "#3ddc97", BLUE = "#4ea1ff", WARN = "#ffb454", BAD = "#ff6b81",
       MUTED = "#93a0bd", TEXT = "#e8edf7", GREY = "#7e8bb0";
@@ -49,8 +50,85 @@
     });
   });
 
+  /* ======================= SEASON SWITCHING ======================= */
+  function seasonOf(date) {                       // 'YYYY-MM-DD' -> 'YYYY/YY' (Jul->Jun)
+    var y = +String(date).slice(0, 4), mo = +String(date).slice(5, 7);
+    if (!y) return "";
+    var start = mo >= 7 ? y : y - 1;
+    return start + "/" + ("0" + ((start + 1) % 100)).slice(-2);
+  }
+  function seasonLabel(sel) { return (D.seasonLabels && D.seasonLabels[sel]) || sel; }
+  function shotsForSeason(sel) {
+    if (sel === "all") return ALLSHOTS;
+    var out = {};
+    Object.keys(ALLSHOTS).forEach(function (nm) {
+      var arr = ALLSHOTS[nm].filter(function (s) { return seasonOf(s.date) === sel; });
+      if (arr.length) out[nm] = arr;
+    });
+    return out;
+  }
+  function eventsForSeason(sel) {
+    if (sel === "all") return ALLEV;
+    var games = ALLEV._games || [];
+    function keep(e) { var g = games[e[e.length - 1]]; return !!g && (g[2] || seasonOf(g[1])) === sel; }
+    var out = { _games: games };
+    Object.keys(ALLEV).forEach(function (nm) {
+      if (nm === "_games") return;
+      var ev = ALLEV[nm] || {}, o = {};
+      ["shots", "dribbles", "tackles", "passes"].forEach(function (k) { o[k] = (ev[k] || []).filter(keep); });
+      out[nm] = o;
+    });
+    return out;
+  }
+  // friendly placeholder for a season that has no data yet (e.g. 2026/27 pre-pipeline)
+  function seasonEmpty(host, what) {
+    if (!host) return;
+    host.innerHTML = '<div class="empty-state"><h3>No ' + esc(what) + " for " + esc(seasonLabel(ACTIVE)) +
+      " yet</h3><p>The " + esc(ACTIVE) + " season hasn’t started here. Its league fixtures and match " +
+      "data need a new collection pipeline (see the developer guide). Once " + esc(ACTIVE) +
+      " match files land in <code>assets/data</code>, every tab fills in automatically.</p></div>";
+  }
+  function applySeason(sel) {
+    if (!SEASONS[sel] && sel !== "all") sel = D.defaultSeason || "all";
+    ACTIVE = sel;
+    var sd = SEASONS[sel] || { totals: {}, byComp: [], players: [] };
+    T = sd.totals || {};
+    P = sd.players || [];
+    D.byComp = sd.byComp || [];
+    M = (sel === "all") ? ALLM.slice() : ALLM.filter(function (m) { return m.season === sel; });
+    SHOTS = shotsForSeason(sel);
+    PEV = eventsForSeason(sel);
+    PGAMES = PEV._games || [];
+
+    var bs = $("#brandSeason"); if (bs) bs.textContent = seasonLabel(sel);
+    var ss = $("#seasonSel"); if (ss && ss.value !== sel) ss.value = sel;
+    document.title = "FC Barcelona " + seasonLabel(sel) + " — Dashboard & xG Lab";
+
+    renderOverview(); renderMatches(); renderPlayers(); renderXg();
+    buildPlayerLabOptions(); renderPlayerLab(); renderShotGrid(); renderData();
+
+    var fn = $("#footerNote");
+    if (fn) fn.innerHTML = "FC Barcelona &middot; " + esc(seasonLabel(sel)) + " &middot; " + M.length +
+      " matches &middot; WhoScored + Understat data &middot; updated " + esc(D.updated || "");
+  }
+  function initSeasonSwitch() {
+    var ss = $("#seasonSel");
+    if (!ss) return;
+    (D.seasonList || ["all"]).forEach(function (s) {
+      var o = document.createElement("option");
+      o.value = s; o.textContent = seasonLabel(s); ss.appendChild(o);
+    });
+    ss.value = ACTIVE;
+    ss.addEventListener("change", function () { applySeason(ss.value); window.scrollTo(0, 0); });
+  }
+
   /* ======================= OVERVIEW ======================= */
   function renderOverview() {
+    if (!M.length) {
+      seasonEmpty($("#overviewStats"), "season data");
+      $("#overviewForm").innerHTML = ""; $("#compGrid").innerHTML = ""; $("#timeline").innerHTML = "";
+      return;
+    }
     var s = "";
     s += statCard(T.p, "Played");
     s += statCard(T.w, "Wins", "accent");
@@ -132,6 +210,7 @@
   }
   var COMP_COL = { "La Liga": BLUE, "UCL": ACC, "Copa": "#c57aff", "Supercopa": WARN };
   function renderMatches() {
+    if (!M.length) { seasonEmpty($("#matchList"), "matches"); $("#teamTable").innerHTML = ""; return; }
     var q = ($("#mSearch").value || "").toLowerCase();
     var comp = $("#mComp").value;
     var list = M.filter(function (m) {
@@ -157,6 +236,7 @@
     });
   }
   function renderTeamTotals() {
+    if (!M.length) { seasonEmpty($("#teamTable"), "match data"); return; }
     var g = M.length || 1;
     function agg(f) { return M.reduce(function (s, m) { return s + (f(m) || 0); }, 0); }
     var rows = [
@@ -196,6 +276,11 @@
   ];
   var pSort = { k: "ga", dir: -1 };
   function renderPlayers() {
+    if (!P.length) {
+      seasonEmpty($("#playersTable"), "player data");
+      $("#playerLeaders").innerHTML = ""; $("#playerBoards").innerHTML = "";
+      return;
+    }
     // pos filter options
     var posSel = $("#playerPos");
     if (posSel.options.length <= 1) {
@@ -312,6 +397,12 @@
 
   /* ======================= XG LAB ======================= */
   function renderXg() {
+    if (!M.length) {
+      seasonEmpty($("#xgStats"), "xG data");
+      ["#xgScatter", "#xgScatterLegend", "#homeAway", "#xgInsight", "#finClinical", "#finWasteful"]
+        .forEach(function (id) { var el = $(id); if (el) el.innerHTML = ""; });
+      return;
+    }
     var over = M.filter(function (m) { return m.bcn_goals > m.bcn_xg; }).length;
     $("#xgStats").innerHTML =
       statCard(T.gf, "Goals Scored", "accent") +
@@ -582,23 +673,59 @@
     else if (f === "big") arr = arr.filter(function (s) { return s.big; });
     return arr;
   }
+  // stat card that also shows a second (compare) player's value when one is picked
+  function statCard2(mv, cv, k, cls) {
+    if (cv == null)
+      return '<div class="stat"><div class="v ' + (cls || "") + '">' + mv + '</div><div class="k">' + k + "</div></div>";
+    return '<div class="stat"><div class="v accent">' + mv + '</div>' +
+      '<div class="v2">' + cv + '</div><div class="k">' + k + "</div></div>";
+  }
+  // success / conversion breakdown for an action-map metric (arr = the drawn events)
+  function mapSummary(arr, kind, ev) {
+    arr = arr || [];
+    var n = arr.length, i;
+    if (kind === "shots") {
+      var g = 0, ot = 0;
+      for (i = 0; i < n; i++) { if (arr[i][4]) g++; if (arr[i][5]) ot++; }
+      return n + " shots &middot; " + ot + " on target &middot; " + g + " goals &middot; " +
+        (n ? Math.round(100 * g / n) : 0) + "% conv";
+    }
+    if (kind === "prog") {
+      var tp = ev && ev.passes ? ev.passes.length : 0;
+      return n + " progressive &middot; " + (tp ? Math.round(100 * n / tp) : 0) + "% of passes";
+    }
+    var oi = kind === "tackles" ? 2 : 4, ok = 0;
+    for (i = 0; i < n; i++) { if (arr[i][oi]) ok++; }
+    var w = { dribbles: ["take-ons", "won", "lost"], tackles: ["tackles", "won", "lost"],
+              passes: ["passes", "complete", "incomplete"] }[kind] || ["", "ok", "fail"];
+    return n + " " + w[0] + " &middot; " + ok + " " + w[1] + " &middot; " + (n - ok) + " " + w[2] +
+      " &middot; " + (n ? Math.round(100 * ok / n) : 0) + "%";
+  }
   function renderPlayerLab() {
+    if (!P.length) {
+      seasonEmpty($("#plStats"), "player data");
+      $("#plBarsCard").style.display = "none";
+      $("#plHeatGrid").innerHTML = ""; $("#plRadar").innerHTML = ""; $("#plRadarLegend").innerHTML = "";
+      $("#plHeatNameA").innerHTML = ""; $("#plHeatNameB").innerHTML = "";
+      return;
+    }
     var main = $("#plMain").value, cmp = $("#plCompare").value;
     var p = playerByName(main); if (!p) return;
+    var pc = cmp ? playerByName(cmp) : null;
+    function rtg(q) { return q.rating ? q.rating.toFixed(2) : "&ndash;"; }
     var s = "";
-    s += statCard(p.apps, "Apps");
-    s += statCard(p.mins, "Minutes");
-    s += statCard(p.goals, "Goals", "accent");
-    s += statCard(p.assists, "Assists", "blue");
-    s += statCard(n2(p.xg), "xG", "warn");
-    s += statCard(sgn(p.xgd), "xG&plusmn;", p.xgd >= 0 ? "accent" : "bad");
-    s += statCard(p.shots, "Shots");
-    s += statCard(p.keyp, "Key Passes");
-    s += statCard(p.rating ? p.rating.toFixed(2) : "&ndash;", "Avg Rating", "accent");
+    s += statCard2(p.apps,     pc ? pc.apps : null,     "Apps");
+    s += statCard2(p.mins,     pc ? pc.mins : null,     "Minutes");
+    s += statCard2(p.goals,    pc ? pc.goals : null,    "Goals", "accent");
+    s += statCard2(p.assists,  pc ? pc.assists : null,  "Assists", "blue");
+    s += statCard2(n2(p.xg),   pc ? n2(pc.xg) : null,   "xG", "warn");
+    s += statCard2(sgn(p.xgd), pc ? sgn(pc.xgd) : null, "xG&plusmn;", p.xgd >= 0 ? "accent" : "bad");
+    s += statCard2(p.shots,    pc ? pc.shots : null,    "Shots");
+    s += statCard2(p.keyp,     pc ? pc.keyp : null,     "Key Passes");
+    s += statCard2(rtg(p),     pc ? rtg(pc) : null,     "Avg Rating", "accent");
     $("#plStats").innerHTML = s;
 
     var pool = P.filter(function (q) { return q.mins >= 120; });
-    var pc = cmp ? playerByName(cmp) : null;
     var players = [p]; if (pc) players.push(pc);
     radar($("#plRadar"), players, pool.length ? pool : P);
 
@@ -606,8 +733,8 @@
     var barsCard = $("#plBarsCard");
     if (pc) {
       $("#plCompareTitle").innerHTML = esc(main) + " vs " + esc(cmp);
-      var metrics = [["shots", "Shots"], ["drib", "Take-ons won"], ["tackles", "Tackles"],
-                     ["passes", "Passes"], ["prog", "Progressive passes"]];
+      var metrics = [["goals", "Goals"], ["assists", "Assists"], ["shots", "Shots"], ["keyp", "Key passes"],
+                     ["drib", "Take-ons won"], ["tackles", "Tackles"], ["passes", "Passes"], ["prog", "Progressive passes"]];
       $("#plCompareBody").innerHTML = metrics.map(function (mt) {
         var a = p[mt[0]] || 0, b = pc[mt[0]] || 0, t = (a + b) || 1, ap = Math.round(100 * a / t);
         return '<div class="stat-cmp"><div class="sc-val' + (a >= b ? " win" : "") + '">' + a + '</div>' +
@@ -625,7 +752,7 @@
     $("#plHeatNameA").innerHTML = esc(main);
     $("#plHeatNameB").innerHTML = pc ? esc(cmp) : "";
     var ea = PEV[main] || {}, eb = pc ? (PEV[cmp] || {}) : null;
-    var GM = [["shots", "Shots"], ["dribbles", "Take-ons won"], ["tackles", "Tackles"],
+    var GM = [["shots", "Shots"], ["dribbles", "Take-ons"], ["tackles", "Tackles"],
               ["passes", "Passes"], ["prog", "Progressive passes"]];
     function dataFor(e, key) {
       if (!e) return [];
@@ -634,12 +761,13 @@
     }
     var cols = pc ? "1fr 1fr" : "1fr";
     $("#plHeatGrid").innerHTML = GM.map(function (mt, i) {
-      var na = dataFor(ea, mt[0]).length;
-      var lab = mt[1] + ' <span style="color:' + ACC + '">' + na + '</span>' +
-        (pc ? ' &middot; <span style="color:' + BLUE + '">' + dataFor(eb, mt[0]).length + '</span>' : '');
-      return '<div style="margin-bottom:14px">' +
-        '<div style="font-size:12px;color:' + MUTED + ';text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px">' + lab + '</div>' +
-        '<div style="display:grid;grid-template-columns:' + cols + ';gap:12px">' +
+      var title = '<div style="font-size:12px;color:' + MUTED + ';text-transform:uppercase;letter-spacing:.6px">' + mt[1] + '</div>';
+      var sumA = '<div style="font-size:11.5px;color:' + ACC + ';margin-top:3px;font-variant-numeric:tabular-nums">' +
+        (pc ? '<b>' + esc(main) + '</b> &middot; ' : '') + mapSummary(dataFor(ea, mt[0]), mt[0], ea) + '</div>';
+      var sumB = pc ? '<div style="font-size:11.5px;color:' + BLUE + ';margin-top:1px;font-variant-numeric:tabular-nums">' +
+        '<b>' + esc(cmp) + '</b> &middot; ' + mapSummary(dataFor(eb, mt[0]), mt[0], eb) + '</div>' : '';
+      return '<div style="margin-bottom:16px">' + title + sumA + sumB +
+        '<div style="display:grid;grid-template-columns:' + cols + ';gap:12px;margin-top:6px">' +
         '<div id="pg_a_' + i + '"></div>' + (pc ? '<div id="pg_b_' + i + '"></div>' : '') + '</div></div>';
     }).join("");
     GM.forEach(function (mt, i) {
@@ -647,22 +775,39 @@
       if (pc) playerGraph($("#pg_b_" + i), dataFor(eb, mt[0]), mt[0], BLUE);
     });
   }
-  function initPlayerLab() {
+  // (Re)populate the Player Lab selects for the active season, keeping the current
+  // pick when that player also played this season. Rebuilt on every season switch.
+  var _plHooked = false;
+  function buildPlayerLabOptions() {
+    var mainSel = $("#plMain"), cmpSel = $("#plCompare");
+    if (!mainSel || !cmpSel) return;
+    var prevMain = mainSel.value, prevCmp = cmpSel.value;
     var opts = P.filter(function (p) { return p.apps > 0; })
       .slice().sort(function (a, b) { return b.ga - a.ga; });
-    var mainSel = $("#plMain"), cmpSel = $("#plCompare");
+    mainSel.innerHTML = "";
+    cmpSel.innerHTML = '<option value="">&mdash; none &mdash;</option>';
     opts.forEach(function (p) {
       var o = document.createElement("option"); o.value = p.name; o.textContent = p.name; mainSel.appendChild(o);
       var o2 = document.createElement("option"); o2.value = p.name; o2.textContent = p.name; cmpSel.appendChild(o2);
     });
-    // default to top scorer with shots
-    var withShots = opts.filter(function (p) { return (SHOTS[p.name] || []).length; });
-    if (withShots[0]) mainSel.value = withShots[0].name;
-    [mainSel, cmpSel].forEach(function (e) { e.addEventListener("change", renderPlayerLab); });
+    var names = opts.map(function (p) { return p.name; });
+    if (names.indexOf(prevMain) >= 0) {
+      mainSel.value = prevMain;
+    } else {
+      // default to the top scorer who actually has shots this season
+      var withShots = opts.filter(function (p) { return (SHOTS[p.name] || []).length; });
+      mainSel.value = ((withShots[0] || opts[0] || {}).name) || "";
+    }
+    cmpSel.value = names.indexOf(prevCmp) >= 0 ? prevCmp : "";
+    if (!_plHooked) {
+      _plHooked = true;
+      [mainSel, cmpSel].forEach(function (e) { e.addEventListener("change", renderPlayerLab); });
+    }
   }
 
   /* ======================= SHOT MAPS GRID ======================= */
   function renderShotGrid() {
+    if (!M.length) { seasonEmpty($("#shotGrid"), "shot maps"); return; }
     var q = ($("#sSearch").value || "").toLowerCase();
     var comp = $("#sComp").value;
     var list = M.filter(function (m) {
@@ -699,13 +844,6 @@
   }
 
   /* ======================= INIT ======================= */
-  renderOverview();
-  renderMatches();
-  renderPlayers();
-  renderXg();
-  initPlayerLab();
-  renderPlayerLab();
-  renderShotGrid();
-  renderData();
-  $("#footerNote").innerHTML = "FC Barcelona 2025/26 &middot; " + M.length + " matches &middot; WhoScored + Understat data &middot; updated " + esc(D.updated || "");
+  initSeasonSwitch();
+  applySeason(ACTIVE);   // sets the active-season slices and renders every tab + footer
 })();
