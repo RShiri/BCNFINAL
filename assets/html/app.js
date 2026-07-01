@@ -8,6 +8,7 @@
   var T = D.totals || {};
   var SHOTS = D.playerShots || {};
   var PEV = window.PLAYER_EVENTS || {};
+  var PGAMES = PEV._games || [];
 
   var ACC = "#3ddc97", BLUE = "#4ea1ff", WARN = "#ffb454", BAD = "#ff6b81",
       MUTED = "#93a0bd", TEXT = "#e8edf7", GREY = "#7e8bb0";
@@ -452,6 +453,7 @@
     }
     var gid = "g" + (_gid++);
     function di(t) { return ' data-info="' + esc(t) + '"'; }
+    function gmOf(e) { var g = PGAMES[e[e.length - 1]]; return g ? (" " + DOT + " vs " + g[0]) : ""; }
     var DOT = " - ";
     var s = '<defs>' +
       '<marker id="' + gid + 'g" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4 Z" fill="#43e8a0"/></marker>' +
@@ -461,7 +463,7 @@
       events.forEach(function (e) {
         var x = PX(e[0]), y = PY(e[1]), gy = PY(e[2]), xg = e[3], goal = e[4], ot = e[5];
         var r = 0.55 + Math.sqrt(xg) * 2.2;
-        var info = e[6] + "' " + DOT + " xG " + xg.toFixed(2) + " " + DOT + " " + (goal ? "GOAL" : ot ? "On target" : "Off target");
+        var info = e[6] + "' " + DOT + " xG " + xg.toFixed(2) + " " + DOT + " " + (goal ? "GOAL" : ot ? "On target" : "Off target") + gmOf(e);
         s += '<line x1="' + x.toFixed(1) + '" y1="' + y.toFixed(1) + '" x2="100" y2="' + gy.toFixed(1) +
           '" stroke="' + (goal ? "#ffd34e" : color) + '" stroke-width="' + (goal ? 0.35 : 0.22) +
           '" stroke-opacity="' + (goal ? 0.9 : 0.3) + '"/>';
@@ -474,7 +476,7 @@
     } else if (kind === "tackles") {
       events.forEach(function (e) {
         var x = PX(e[0]), y = PY(e[1]), col = e[2] ? "#43e8a0" : "#ff5e7a";
-        var info = e[3] + "' " + DOT + " Tackle " + (e[2] ? "won" : "lost");
+        var info = e[3] + "' " + DOT + " Tackle " + (e[2] ? "won" : "lost") + gmOf(e);
         s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="1.1" fill="' + (e[2] ? col : "none") +
           '" fill-opacity="0.85" stroke="' + col + '" stroke-width="0.4"' + di(info) + '/>';
       });
@@ -483,7 +485,7 @@
         var x = PX(e[0]), y = PY(e[1]), ok, ex, ey, prog = 0, mn, info;
         if (kind === "dribbles") {
           ok = e[4]; mn = e[5];
-          info = mn + "' " + DOT + " Take-on " + (ok ? "won" : "lost");
+          info = mn + "' " + DOT + " Take-on " + (ok ? "won" : "lost") + gmOf(e);
           if (e[2] < 0) {
             var c0 = ok ? "#43e8a0" : "#ff5e7a";
             s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="0.9" fill="' + (ok ? c0 : "none") +
@@ -492,7 +494,7 @@
           ex = PX(e[2]); ey = PY(e[3]);
         } else {
           ex = PX(e[2]); ey = PY(e[3]); ok = e[4]; prog = kind === "prog" ? 1 : e[5]; mn = e[6];
-          info = mn + "' " + DOT + " " + (ok ? "Complete" : "Incomplete") + (prog ? " " + DOT + " progressive" : "");
+          info = mn + "' " + DOT + " " + (ok ? "Complete" : "Incomplete") + (prog ? " " + DOT + " progressive" : "") + gmOf(e);
         }
         var col = ok ? ((prog || kind === "prog" || kind === "dribbles") ? "#43e8a0" : "#1f9d5e") : "#ff5e7a";
         var mk = "url(#" + gid + (ok ? "g" : "r") + ")";
@@ -566,17 +568,13 @@
     s += statCard(p.rating ? p.rating.toFixed(2) : "&ndash;", "Avg Rating", "accent");
     $("#plStats").innerHTML = s;
 
-    var shots = plShots(main);
-    $("#plMapTitle").innerHTML = esc(main) + " &mdash; " + shots.length + " shots";
-    pitchShotMap($("#plMap"), shots);
-
     var pool = P.filter(function (q) { return q.mins >= 120; });
     var pc = cmp ? playerByName(cmp) : null;
     var players = [p]; if (pc) players.push(pc);
     radar($("#plRadar"), players, pool.length ? pool : P);
 
-    // side-by-side head-to-head comparison
-    var cmpCard = $("#plCompareCard");
+    // head-to-head bars (only when comparing)
+    var barsCard = $("#plBarsCard");
     if (pc) {
       $("#plCompareTitle").innerHTML = esc(main) + " vs " + esc(cmp);
       var metrics = [["shots", "Shots"], ["drib", "Take-ons won"], ["tackles", "Tackles"],
@@ -589,32 +587,36 @@
           '<div class="sc-fill a" style="width:' + (100 - ap) + '%"></div></div></div>' +
           '<div class="sc-val' + (b > a ? " win" : "") + '">' + b + "</div></div>";
       }).join("");
-      // match-centre-style graphs, per player, side by side
-      $("#plHeatNameA").innerHTML = esc(main);
-      $("#plHeatNameB").innerHTML = esc(cmp);
-      var ea = PEV[main] || {}, eb = PEV[cmp] || {};
-      var GM = [["shots", "Shots"], ["dribbles", "Take-ons won"], ["tackles", "Tackles"],
-                ["passes", "Passes"], ["prog", "Progressive passes"]];
-      function dataFor(e, key) {
-        if (key === "prog") return (e.passes || []).filter(function (p) { return p[5]; });
-        return e[key] || [];
-      }
-      $("#plHeatGrid").innerHTML = GM.map(function (mt, i) {
-        var na = dataFor(ea, mt[0]).length, nb = dataFor(eb, mt[0]).length;
-        return '<div style="margin-bottom:14px">' +
-          '<div style="font-size:12px;color:' + MUTED + ';text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px">' +
-          mt[1] + ' <span style="color:' + ACC + '">' + na + '</span> &middot; <span style="color:' + BLUE + '">' + nb + '</span></div>' +
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
-          '<div id="pg_a_' + i + '"></div><div id="pg_b_' + i + '"></div></div></div>';
-      }).join("");
-      GM.forEach(function (mt, i) {
-        playerGraph($("#pg_a_" + i), dataFor(ea, mt[0]), mt[0], ACC);
-        playerGraph($("#pg_b_" + i), dataFor(eb, mt[0]), mt[0], BLUE);
-      });
-      cmpCard.style.display = "";
+      barsCard.style.display = "";
     } else {
-      cmpCard.style.display = "none";
+      barsCard.style.display = "none";
     }
+
+    // action maps -- always the main player; add the compare column when picked
+    $("#plHeatNameA").innerHTML = esc(main);
+    $("#plHeatNameB").innerHTML = pc ? esc(cmp) : "";
+    var ea = PEV[main] || {}, eb = pc ? (PEV[cmp] || {}) : null;
+    var GM = [["shots", "Shots"], ["dribbles", "Take-ons won"], ["tackles", "Tackles"],
+              ["passes", "Passes"], ["prog", "Progressive passes"]];
+    function dataFor(e, key) {
+      if (!e) return [];
+      if (key === "prog") return (e.passes || []).filter(function (q) { return q[5]; });
+      return e[key] || [];
+    }
+    var cols = pc ? "1fr 1fr" : "1fr";
+    $("#plHeatGrid").innerHTML = GM.map(function (mt, i) {
+      var na = dataFor(ea, mt[0]).length;
+      var lab = mt[1] + ' <span style="color:' + ACC + '">' + na + '</span>' +
+        (pc ? ' &middot; <span style="color:' + BLUE + '">' + dataFor(eb, mt[0]).length + '</span>' : '');
+      return '<div style="margin-bottom:14px">' +
+        '<div style="font-size:12px;color:' + MUTED + ';text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px">' + lab + '</div>' +
+        '<div style="display:grid;grid-template-columns:' + cols + ';gap:12px">' +
+        '<div id="pg_a_' + i + '"></div>' + (pc ? '<div id="pg_b_' + i + '"></div>' : '') + '</div></div>';
+    }).join("");
+    GM.forEach(function (mt, i) {
+      playerGraph($("#pg_a_" + i), dataFor(ea, mt[0]), mt[0], ACC);
+      if (pc) playerGraph($("#pg_b_" + i), dataFor(eb, mt[0]), mt[0], BLUE);
+    });
   }
   function initPlayerLab() {
     var opts = P.filter(function (p) { return p.apps > 0; })
@@ -627,7 +629,7 @@
     // default to top scorer with shots
     var withShots = opts.filter(function (p) { return (SHOTS[p.name] || []).length; });
     if (withShots[0]) mainSel.value = withShots[0].name;
-    [mainSel, cmpSel, $("#plShotFilter")].forEach(function (e) { e.addEventListener("change", renderPlayerLab); });
+    [mainSel, cmpSel].forEach(function (e) { e.addEventListener("change", renderPlayerLab); });
   }
 
   /* ======================= SHOT MAPS GRID ======================= */

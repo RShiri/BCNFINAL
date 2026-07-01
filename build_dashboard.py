@@ -301,6 +301,8 @@ def aggregate_player_events(matches):
     files = {os.path.basename(f).split("_")[1]: f
              for f in glob.glob(os.path.join(DATA_DIR, "match_*_cache.json"))}
     ev = {}
+    games = []          # index -> [opponent, date]
+    game_idx = {}       # mid -> index
 
     def rec(nm):
         e = ev.get(nm)
@@ -319,6 +321,11 @@ def aggregate_player_events(matches):
             d = json.load(open(f, encoding="utf-8"))
         except Exception:
             continue
+        mid = m["mid"]
+        if mid not in game_idx:
+            game_idx[mid] = len(games)
+            games.append([m["opp_name"], m["date"]])
+        gi = game_idx[mid]
         side = "home" if m["bcn_is_home"] else "away"
         team = d.get(side, {})
         tid = team.get("teamId"); tname = team.get("name", "")
@@ -345,7 +352,7 @@ def aggregate_player_events(matches):
             gy = _qval(e, "GoalMouthY")
             rec(nm)["shots"].append([ri(e.get("x")), ri(e.get("y")),
                                      ri(gy) if gy is not None else 50, xg, goal, ot,
-                                     e.get("minute") or 0])
+                                     e.get("minute") or 0, gi])
 
         # per-player on-ball timeline (for dribble carry direction)
         touches = {}
@@ -376,16 +383,17 @@ def aggregate_player_events(matches):
                 for (t2, x2, y2) in touches.get(nm, []):
                     if t2 > tt and t2 - tt <= 8 and (abs(x2 - x) > 0.8 or abs(y2 - y) > 0.8):
                         exy = (ri(x2), ri(y2)); break
-                rec(nm)["dribbles"].append([ri(x), ri(y), exy[0], exy[1], 1 if ok else 0, e.get("minute") or 0])
+                rec(nm)["dribbles"].append([ri(x), ri(y), exy[0], exy[1], 1 if ok else 0, e.get("minute") or 0, gi])
             elif t == "Tackle":
-                rec(nm)["tackles"].append([ri(x), ri(y), 1 if ok else 0, e.get("minute") or 0])
+                rec(nm)["tackles"].append([ri(x), ri(y), 1 if ok else 0, e.get("minute") or 0, gi])
             elif t == "Pass":
                 exq = _qval(e, "PassEndX"); eyq = _qval(e, "PassEndY")
                 ex = exq if exq is not None else (e.get("endX") or x)
                 ey = eyq if eyq is not None else (e.get("endY") or y)
                 prog = 1 if (ok and (ex - x) >= 15 and ex >= 50) else 0
-                rec(nm)["passes"].append([ri(x), ri(y), ri(ex), ri(ey), 1 if ok else 0, prog, e.get("minute") or 0])
+                rec(nm)["passes"].append([ri(x), ri(y), ri(ex), ri(ey), 1 if ok else 0, prog, e.get("minute") or 0, gi])
 
+    ev["_games"] = games
     return ev
 
 
