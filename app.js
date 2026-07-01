@@ -7,6 +7,7 @@
   var P = D.players || [];
   var T = D.totals || {};
   var SHOTS = D.playerShots || {};
+  var HEAT = D.playerHeat || {};
 
   var ACC = "#3ddc97", BLUE = "#4ea1ff", WARN = "#ffb454", BAD = "#ff6b81",
       MUTED = "#93a0bd", TEXT = "#e8edf7", GREY = "#7e8bb0";
@@ -429,6 +430,26 @@
       return '<span class="cl-item"><i class="cl-sw" style="background:' + cols[pi] + '"></i>' + esc(p.name) + "</span>";
     }).join("");
   }
+  function miniHeat(host, grid, color) {
+    if (!host) return;
+    grid = grid || [];
+    var W = 100, H = 64, cols = 12, rows = 8, cw = W / cols, ch = H / rows;
+    var max = Math.max.apply(null, grid.concat([1]));
+    var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="display:block;background:#101a2e;border-radius:6px">'];
+    for (var i = 0; i < grid.length; i++) {
+      var v = grid[i]; if (!v) continue;
+      var c = i % cols, r = (i - c) / cols;
+      var op = 0.12 + 0.85 * Math.min(1, v / max);
+      s.push('<rect x="' + (c * cw).toFixed(1) + '" y="' + (r * ch).toFixed(1) + '" width="' + cw.toFixed(1) +
+        '" height="' + ch.toFixed(1) + '" fill="' + color + '" fill-opacity="' + op.toFixed(2) + '"/>');
+    }
+    s.push('<rect x="0.4" y="0.4" width="99.2" height="63.2" fill="none" stroke="#26304d" stroke-width="0.5"/>');
+    s.push('<line x1="50" y1="0" x2="50" y2="64" stroke="#26304d" stroke-width="0.5"/>');
+    s.push('<rect x="83" y="18" width="17" height="28" fill="none" stroke="#26304d" stroke-width="0.5"/>');
+    s.push('<rect x="0" y="18" width="17" height="28" fill="none" stroke="#26304d" stroke-width="0.5"/>');
+    s.push('</svg>');
+    host.innerHTML = s.join("");
+  }
   function pitchShotMap(host, shots, title) {
     var W = 560, H = 360, pad = 8;
     var pw = W - pad * 2, ph = H - pad * 2;
@@ -507,12 +528,22 @@
           '<div class="sc-fill a" style="width:' + (100 - ap) + '%"></div></div></div>' +
           '<div class="sc-val' + (b > a ? " win" : "") + '">' + b + "</div></div>";
       }).join("");
-      // shot maps side by side
-      var sa = plShots(main), sb = plShots(cmp);
-      $("#plMapATitle").innerHTML = esc(main) + " &mdash; " + sa.length + " shots";
-      $("#plMapBTitle").innerHTML = esc(cmp) + " &mdash; " + sb.length + " shots";
-      pitchShotMap($("#plMapA"), sa);
-      pitchShotMap($("#plMapB"), sb);
+      // per-metric pitch heatmaps, both players side by side
+      $("#plHeatNameA").innerHTML = esc(main);
+      $("#plHeatNameB").innerHTML = esc(cmp);
+      var ha = HEAT[main] || {}, hb = HEAT[cmp] || {};
+      var HM = [["shots", "Shots"], ["takeons", "Take-ons won"], ["tackles", "Tackles"],
+                ["passes", "Passes"], ["prog", "Progressive passes"]];
+      $("#plHeatGrid").innerHTML = HM.map(function (mt, i) {
+        return '<div style="margin-bottom:14px">' +
+          '<div style="font-size:12px;color:' + MUTED + ';text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px">' + mt[1] + '</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+          '<div id="ph_a_' + i + '"></div><div id="ph_b_' + i + '"></div></div></div>';
+      }).join("");
+      HM.forEach(function (mt, i) {
+        miniHeat($("#ph_a_" + i), ha[mt[0]], ACC);
+        miniHeat($("#ph_b_" + i), hb[mt[0]], BLUE);
+      });
       cmpCard.style.display = "";
     } else {
       cmpCard.style.display = "none";
