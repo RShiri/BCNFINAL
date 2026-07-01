@@ -446,20 +446,22 @@
   function playerGraph(host, events, kind, color) {
     if (!host) return;
     events = events || [];
-    // season pass maps can be 1500+ arrows — sample evenly for a readable, fast map
     if (events.length > 350) {
       var st = Math.ceil(events.length / 350);
       events = events.filter(function (_, ix) { return ix % st === 0; });
     }
     var gid = "g" + (_gid++);
+    function di(t) { return ' data-info="' + esc(t) + '"'; }
+    var DOT = " - ";
     var s = '<defs>' +
       '<marker id="' + gid + 'g" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4 Z" fill="#43e8a0"/></marker>' +
       '<marker id="' + gid + 'r" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4 Z" fill="#ff5e7a"/></marker>' +
       '</defs>';
     if (kind === "shots") {
-      events.forEach(function (e) { // [x,y,gy,xg,goal,ot]
+      events.forEach(function (e) {
         var x = PX(e[0]), y = PY(e[1]), gy = PY(e[2]), xg = e[3], goal = e[4], ot = e[5];
         var r = 0.55 + Math.sqrt(xg) * 2.2;
+        var info = e[6] + "' " + DOT + " xG " + xg.toFixed(2) + " " + DOT + " " + (goal ? "GOAL" : ot ? "On target" : "Off target");
         s += '<line x1="' + x.toFixed(1) + '" y1="' + y.toFixed(1) + '" x2="100" y2="' + gy.toFixed(1) +
           '" stroke="' + (goal ? "#ffd34e" : color) + '" stroke-width="' + (goal ? 0.35 : 0.22) +
           '" stroke-opacity="' + (goal ? 0.9 : 0.3) + '"/>';
@@ -467,36 +469,47 @@
           '" fill="none" stroke="#ffd34e" stroke-width="0.4"/>';
         var fill = (goal || ot) ? color : "none";
         s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + r.toFixed(1) +
-          '" fill="' + fill + '" fill-opacity="0.85" stroke="' + color + '" stroke-width="' + (fill === "none" ? 0.4 : 0) + '"/>';
+          '" fill="' + fill + '" fill-opacity="0.85" stroke="' + color + '" stroke-width="' + (fill === "none" ? 0.4 : 0) + '"' + di(info) + '/>';
       });
     } else if (kind === "tackles") {
-      events.forEach(function (e) { // [x,y,ok]
-        var x = PX(e[0]), y = PY(e[1]), col = e[2] ? "#43e8a0" : "#ff5e7a";
-        s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="1.1" fill="' + (e[2] ? col : "none") +
-          '" fill-opacity="0.85" stroke="' + col + '" stroke-width="0.4"/>';
-      });
-    } else { // dribbles / passes / prog — arrows
       events.forEach(function (e) {
-        var x = PX(e[0]), y = PY(e[1]), ok, ex, ey, prog = 0;
+        var x = PX(e[0]), y = PY(e[1]), col = e[2] ? "#43e8a0" : "#ff5e7a";
+        var info = e[3] + "' " + DOT + " Tackle " + (e[2] ? "won" : "lost");
+        s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="1.1" fill="' + (e[2] ? col : "none") +
+          '" fill-opacity="0.85" stroke="' + col + '" stroke-width="0.4"' + di(info) + '/>';
+      });
+    } else {
+      events.forEach(function (e) {
+        var x = PX(e[0]), y = PY(e[1]), ok, ex, ey, prog = 0, mn, info;
         if (kind === "dribbles") {
-          ok = e[4];
-          if (e[2] < 0) { // no carry end -> just the take-on dot
+          ok = e[4]; mn = e[5];
+          info = mn + "' " + DOT + " Take-on " + (ok ? "won" : "lost");
+          if (e[2] < 0) {
             var c0 = ok ? "#43e8a0" : "#ff5e7a";
             s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="0.9" fill="' + (ok ? c0 : "none") +
-              '" stroke="' + c0 + '" stroke-width="0.4"/>'; return;
+              '" stroke="' + c0 + '" stroke-width="0.4"' + di(info) + '/>'; return;
           }
           ex = PX(e[2]); ey = PY(e[3]);
-        } else { // passes / prog: [x,y,ex,ey,ok,prog]
-          ex = PX(e[2]); ey = PY(e[3]); ok = e[4]; prog = kind === "prog" ? 1 : e[5];
+        } else {
+          ex = PX(e[2]); ey = PY(e[3]); ok = e[4]; prog = kind === "prog" ? 1 : e[5]; mn = e[6];
+          info = mn + "' " + DOT + " " + (ok ? "Complete" : "Incomplete") + (prog ? " " + DOT + " progressive" : "");
         }
         var col = ok ? ((prog || kind === "prog" || kind === "dribbles") ? "#43e8a0" : "#1f9d5e") : "#ff5e7a";
         var mk = "url(#" + gid + (ok ? "g" : "r") + ")";
         s += '<line x1="' + x.toFixed(1) + '" y1="' + y.toFixed(1) + '" x2="' + ex.toFixed(1) + '" y2="' + ey.toFixed(1) +
-          '" stroke="' + col + '" stroke-width="' + (prog || kind === "prog" ? 0.35 : 0.22) +
-          '" stroke-opacity="0.72"' + (ok ? "" : ' stroke-dasharray="0.9 0.9"') + ' marker-end="' + mk + '"/>';
+          '" stroke="' + col + '" stroke-width="' + (prog || kind === "prog" ? 0.5 : 0.28) +
+          '" stroke-opacity="0.72"' + (ok ? "" : ' stroke-dasharray="0.9 0.9"') + ' marker-end="' + mk + '"' + di(info) + '/>';
       });
     }
     host.innerHTML = pitchWrap(s);
+    if (!host._hooked) {
+      host._hooked = 1;
+      host.addEventListener("pointermove", function (ev) {
+        var t = ev.target, inf = t && t.getAttribute && t.getAttribute("data-info");
+        if (inf) showTip("<div class='t-line'>" + inf + "</div>", ev.clientX, ev.clientY); else hideTip();
+      });
+      host.addEventListener("pointerleave", hideTip);
+    }
   }
   function pitchShotMap(host, shots, title) {
     var W = 560, H = 360, pad = 8;

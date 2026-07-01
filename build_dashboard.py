@@ -344,7 +344,8 @@ def aggregate_player_events(matches):
             ot = 1 if (et in ("Goal", "SavedShot") and "Blocked" not in qs) else 0
             gy = _qval(e, "GoalMouthY")
             rec(nm)["shots"].append([ri(e.get("x")), ri(e.get("y")),
-                                     ri(gy) if gy is not None else 50, xg, goal, ot])
+                                     ri(gy) if gy is not None else 50, xg, goal, ot,
+                                     e.get("minute") or 0])
 
         # per-player on-ball timeline (for dribble carry direction)
         touches = {}
@@ -375,15 +376,15 @@ def aggregate_player_events(matches):
                 for (t2, x2, y2) in touches.get(nm, []):
                     if t2 > tt and t2 - tt <= 8 and (abs(x2 - x) > 0.8 or abs(y2 - y) > 0.8):
                         exy = (ri(x2), ri(y2)); break
-                rec(nm)["dribbles"].append([ri(x), ri(y), exy[0], exy[1], 1 if ok else 0])
+                rec(nm)["dribbles"].append([ri(x), ri(y), exy[0], exy[1], 1 if ok else 0, e.get("minute") or 0])
             elif t == "Tackle":
-                rec(nm)["tackles"].append([ri(x), ri(y), 1 if ok else 0])
+                rec(nm)["tackles"].append([ri(x), ri(y), 1 if ok else 0, e.get("minute") or 0])
             elif t == "Pass":
                 exq = _qval(e, "PassEndX"); eyq = _qval(e, "PassEndY")
                 ex = exq if exq is not None else (e.get("endX") or x)
                 ey = eyq if eyq is not None else (e.get("endY") or y)
                 prog = 1 if (ok and (ex - x) >= 15 and ex >= 50) else 0
-                rec(nm)["passes"].append([ri(x), ri(y), ri(ex), ri(ey), 1 if ok else 0, prog])
+                rec(nm)["passes"].append([ri(x), ri(y), ri(ex), ri(ey), 1 if ok else 0, prog, e.get("minute") or 0])
 
     return ev
 
