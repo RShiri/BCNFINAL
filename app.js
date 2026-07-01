@@ -415,22 +415,37 @@
     }
     var cols = [ACC, BLUE];
     players.forEach(function (p, pi) {
-      var pts = [];
+      var pts = [], dots = "";
       for (i = 0; i < N; i++) {
         var mtc = RADAR_METRICS[i];
         var val = mtc.per90 ? per90(p, mtc.k) : p[mtc.k];
         var pct = pctRank(pool, val, function (q) { return mtc.per90 ? per90(q, mtc.k) : q[mtc.k]; }) / 100;
         var a3 = -Math.PI / 2 + i / N * 2 * Math.PI, rr2 = R * Math.max(0.04, pct);
-        pts.push((cx + rr2 * Math.cos(a3)).toFixed(1) + "," + (cy + rr2 * Math.sin(a3)).toFixed(1));
+        var vx = cx + rr2 * Math.cos(a3), vy = cy + rr2 * Math.sin(a3);
+        pts.push(vx.toFixed(1) + "," + vy.toFixed(1));
+        var vtxt = mtc.per90 ? val.toFixed(2) + "/90" : val.toFixed(2);
+        var info = p.name + " - " + mtc.t + ": " + Math.round(pct * 100) + " pctl (" + vtxt + ")";
+        dots += '<circle cx="' + vx.toFixed(1) + '" cy="' + vy.toFixed(1) + '" r="3.4" fill="' + cols[pi] +
+          '" stroke="#0b0f1a" stroke-width="1" data-info="' + esc(info) + '"/>';
       }
       svg.push('<polygon points="' + pts.join(" ") + '" fill="' + cols[pi] + '" fill-opacity="0.18" stroke="' + cols[pi] + '" stroke-width="2"/>');
+      svg.push(dots);
     });
     svg.push("</svg>");
     host.innerHTML = svg.join("");
+    if (!host._hooked) {
+      host._hooked = 1;
+      host.addEventListener("pointermove", function (ev) {
+        var t = ev.target, inf = t && t.getAttribute && t.getAttribute("data-info");
+        if (inf) showTip("<div class='t-line'>" + inf + "</div>", ev.clientX, ev.clientY); else hideTip();
+      });
+      host.addEventListener("pointerleave", hideTip);
+    }
     $("#plRadarLegend").innerHTML = players.map(function (p, pi) {
       return '<span class="cl-item"><i class="cl-sw" style="background:' + cols[pi] + '"></i>' + esc(p.name) + "</span>";
     }).join("");
   }
+
   // Same graphs as the Match Centre, per player. WhoScored coords 0-100, attacking right.
   var _gid = 0;
   function PX(x) { return x; }
