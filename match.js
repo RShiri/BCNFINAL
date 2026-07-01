@@ -1320,9 +1320,37 @@
   }
   function agmNode(x, y, label, title, cls) {
     var dark = (cls === "start" || cls === "shot" || cls === "save");
-    return '<g><title>' + esc(title) + '</title><circle class="agm-node' + (cls ? (" " + cls) : "") +
+    // data-info drives the rich hover tooltip (agmHover); no native <title> so the two
+    // don't double up. The number label sits on top but shares the group's data-info.
+    return '<g data-info="' + esc(title) + '"><circle class="agm-node' + (cls ? (" " + cls) : "") +
       '" cx="' + x.toFixed(2) + '" cy="' + y.toFixed(2) + '" r="1.3"/>' +
       '<text class="agm-nt' + (dark ? " dark" : "") + '" x="' + x.toFixed(2) + '" y="' + y.toFixed(2) + '">' + esc(label) + "</text></g>";
+  }
+  // Human-readable detail for one action node (touch / pass / take-on / shot / save),
+  // shared by the static All-goals map and the animated replay so both hover identically.
+  function agmStepInfo(pt, i) {
+    if (pt.og) return "Own goal — " + (pt.player || "");
+    var type = pt.k === "save" ? "Save" : pt.k === "shot" ? "Goal" : pt.k === "shot_eff" ? "Shot (saved)"
+             : pt.k === "dribble" ? "Take-on" : (i === 0 ? "Move start" : "Pass");
+    var extra = "";
+    if (pt.k === "pass" && pt.cross) extra += " · cross";
+    if (pt.xg != null) extra += " · xG " + pt.xg.toFixed(2);
+    return type + " — " + (pt.player || ("Touch " + (i + 1))) + extra;
+  }
+  function agmTipHTML(info) {
+    var i = info.indexOf(" — "), a = i >= 0 ? info.slice(0, i) : info, b = i >= 0 ? info.slice(i + 3) : "";
+    return '<div class="t-team">' + esc(a) + "</div>" + (b ? '<div class="t-line">' + esc(b) + "</div>" : "");
+  }
+  // Attach floating hover (and tap, for touch) to any action node inside an AGM svg.
+  function agmHover(root) {
+    if (!root) return;
+    function at(e) { return e.target && e.target.closest ? e.target.closest("[data-info]") : null; }
+    root.addEventListener("pointermove", function (e) {
+      if (e.pointerType === "touch") return;
+      var el = at(e); if (el) showTip(e, agmTipHTML(el.getAttribute("data-info"))); else hideTip();
+    });
+    root.addEventListener("pointerleave", hideTip);
+    root.addEventListener("click", function (e) { var el = at(e); if (el) showTip(e, agmTipHTML(el.getAttribute("data-info"))); });
   }
   var AGM_MAX_SEG = 52;  // pitch units (~half length); drop diagram segments longer than this (glitched source coords)
   function agmSeqSVG(seq, numMap, D) {
@@ -1362,10 +1390,7 @@
       var cls = pt.k === "save" ? "save" : (pt.k === "shot" ? "shot" : (pt.k === "dribble" ? "drib" : (i === 0 ? "start" : "")));
       var num = numMap[agmNorm(pt.player)];
       var label = pt.og ? "OG" : ((num != null) ? num : (agmIni(pt.player) || (i + 1)));
-      var ttl = pt.og ? ("Own goal — " + (pt.player || "")) :
-        ((pt.k === "save" ? "Save — " : pt.k === "shot" ? "Goal — " : pt.k === "shot_eff" ? "Shot (saved) — " : "") +
-        (pt.player || ("Touch " + (i + 1))) + (pt.k === "pass" && pt.cross ? " · cross" : "") + (pt.xg != null ? " · xG " + pt.xg.toFixed(2) : ""));
-      a.push(agmNode(pt.x, pt.y, label, ttl, cls));
+      a.push(agmNode(pt.x, pt.y, label, agmStepInfo(pt, i), cls));
     });
     var ly = Math.max(3.4, L.y - 2.0);                                              // scorer name + xG ABOVE the finishing node
     a.push('<text class="agm-scorelab" x="' + L.x.toFixed(2) + '" y="' + (ly - 1.7).toFixed(2) + '">' + esc(seq.scorer) + "</text>");
@@ -1522,6 +1547,7 @@
       feat.innerHTML = meta(g) +
         '<div class="agm-actions"><button type="button" class="agm-dl">⤓ Download PNG</button></div>' +
         roster(g) + '<div class="pitch-wrap">' + agmSeqSVG(g, numMap, D) + "</div>" + legend;
+      agmHover(feat.querySelector("svg.pitch-svg"));
       var btn = feat.querySelector(".agm-dl");
       if (btn) btn.addEventListener("click", function () {
         exportGoalPNG(feat.querySelector("svg.pitch-svg"), g, D, btn);
@@ -1630,11 +1656,7 @@
       var cls = pt.k === "save" ? "save" : (pt.k === "shot" ? "shot" : (pt.k === "dribble" ? "drib" : (i === 0 ? "start" : "")));
       var num = numMap[agmNorm(pt.player)], label = pt.og ? "OG" : ((num != null) ? num : (agmIni(pt.player) || (i + 1)));
       var dark = (cls === "start" || cls === "shot" || cls === "save");
-      var ttl = pt.og ? ("Own goal — " + (pt.player || "")) :
-        ((pt.k === "save" ? "Save — " : pt.k === "shot" ? "Goal — " : pt.k === "shot_eff" ? "Shot (saved) — " : "") +
-        (pt.player || ("Touch " + (i + 1))) + (pt.k === "pass" && pt.cross ? " · cross" : "") + (pt.xg != null ? " · xG " + pt.xg.toFixed(2) : ""));
-      var g = E("g", {});
-      var t = E("title"); t.textContent = ttl; g.appendChild(t);
+      var g = E("g", { "data-info": agmStepInfo(pt, i) });   // rich hover (agmHover)
       g.appendChild(E("circle", { class: "agm-node" + (cls ? " " + cls : ""), cx: pt.x.toFixed(2), cy: pt.y.toFixed(2), r: 1.3 }));
       var tx2 = E("text", { class: "agm-nt" + (dark ? " dark" : ""), x: pt.x.toFixed(2), y: pt.y.toFixed(2) }); tx2.textContent = label;
       g.appendChild(tx2); svg.appendChild(g); return g;
@@ -1822,6 +1844,7 @@
       anim.onAction = function (t) { actionEl.innerHTML = "now: <b>" + (AGM_ANIM_LABEL[t] || t) + "</b>"; };
       anim.onDone = function () { actionEl.innerHTML = "now: <b>Goal!</b>"; };
       feat.querySelector(".pitch-wrap").appendChild(anim.svg);
+      agmHover(anim.svg);
       var spd = feat.querySelector(".agm-spd"), spdv = feat.querySelector(".agm-spdv");
       var speed = 1;
       spd.addEventListener("input", function () { speed = parseFloat(spd.value); spdv.textContent = speed + "×"; });
