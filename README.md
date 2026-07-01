@@ -21,6 +21,18 @@ positions, line-ups, all-goals map and goal replays. All SVG, no images.
 The built site (`assets/html/`) is deployed to the **`gh-pages`** branch. See
 [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for architecture, data model and deploy details.
 
+### 🗓️ Seasons (2025/26 · 2026/27 · All)
+
+The dashboard has a **season switch** in the header. A match's season is derived from its date
+(Jul→Jun), so the app is already wired for **2026/27**: it's selectable and every tab shows an
+empty state until data lands.
+
+> **⚠️ TODO — 2026/27 needs a new data pipeline.** 2026/27 has **no fixtures/results feed yet** —
+> the old FotMob endpoints (`fetch_results.py`) are dead (HTTP 404). A **new pipeline** must
+> collect the 2026/27 La Liga schedule + match feeds and drop `assets/data/match_<id>_cache.json`
+> files dated `2026-08`+. Once they exist, `py build_dashboard.py` buckets them into 2026/27
+> automatically. Details in [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md#-seasons--the-202627-pipeline).
+
 ## 📂 Repository Structure
 
 The repository is organized into progressive modules, taking you from a beginner level to building complex analytics projects.

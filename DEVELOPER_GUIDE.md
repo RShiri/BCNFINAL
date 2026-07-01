@@ -22,7 +22,7 @@ BCNPROJECT-main/
 │   └── html/                   # THE SITE (this folder is what gets deployed)
 │       ├── index.html          # SPA shell (static)
 │       ├── app.js              # SPA logic (static, pure ASCII)
-│       ├── data.js             # GENERATED: window.DATA (season + players + heatmaps)
+│       ├── data.js             # GENERATED: window.DATA (per-season totals/players + matches)
 │       ├── styles.css          # WC2026 stylesheet (copied verbatim)
 │       ├── match.html          # match-centre shell (ported from WC2026)
 │       ├── match.js            # match-centre logic (ported from WC2026)
@@ -73,8 +73,10 @@ No images — everything is SVG built from the event stream.
 1. `bw.load_matches()` (from `build_website.py`) reads every `assets/data/match_*_cache.json`.
 2. Filters to Barcelona matches; normalises competition names; applies `COMP_OVERRIDE`
    (a `{mid: comp}` dict to pin any match) and the "Riyadh Air Metropolitano ≠ Supercopa" fix.
-3. Aggregates season totals, per-competition records, per-player stats (incl. progressive
-   passes and per-metric **12×8 pitch heatmaps**), and per-player shot lists.
+3. Tags each match with its season (`season_of(date)`) and aggregates **per season** (plus a
+   combined `all`): season totals, per-competition records, per-player stats (incl. progressive
+   passes and per-metric **12×8 pitch heatmaps**), and a global per-player shot list. See
+   [Seasons & the 2026/27 pipeline](#-seasons--the-202627-pipeline).
 4. Writes `assets/html/data.js` as `window.DATA = {...}` — **`ensure_ascii=True`** so it
    parses regardless of the charset the static server advertises.
 5. Copies team badges into `logos/` and `mclogos/`.
@@ -85,6 +87,53 @@ No images — everything is SVG built from the event stream.
 > **app.js must stay pure ASCII.** JS files are served without a charset header; use HTML
 > entities (`&rarr;`, `&middot;`, `&mdash;`, `&#9660;`) instead of literal unicode. Validate
 > with `node --check assets/html/app.js` after edits.
+
+---
+
+## 🗓️ Seasons & the 2026/27 pipeline
+
+The dashboard is **multi-season aware**. A header **season switch** offers every season present in
+the data plus the upcoming one, and **All seasons**; picking one re-slices every tab client-side.
+
+**How a match gets its season.** `season_of(date)` in `build_dashboard.py` maps a date to a
+`YYYY/YY` season on a **Jul→Jun** boundary (`2025-08-16` and `2026-06-14` are both `2025/26`;
+`2026-08-…` becomes `2026/27`). Every match record is tagged `m["season"]`, and each `_games`
+entry in `player_events.js` carries its season too.
+
+**`window.DATA` shape (per season):**
+
+```jsonc
+{
+  "defaultSeason": "2025/26",                    // latest season that has data
+  "seasonList":   ["2025/26", "2026/27", "all"],
+  "seasonLabels": { "all": "All seasons", ... },
+  "seasons": {                                   // totals/byComp/players PER season (+ "all")
+    "2025/26": { "totals": {...}, "byComp": [...], "players": [...] },
+    "2026/27": { "totals": {0…}, "byComp": [],    "players": [] },
+    "all":     { ... }
+  },
+  "matches":     [ { "season": "2025/26", ... }, ... ],  // global — filtered client-side
+  "playerShots": { "<name>": [ { "date": ..., ... } ] }  // global — filtered by date client-side
+}
+```
+
+`app.js`'s `applySeason(sel)` sets the active `M / P / T / SHOTS / PEV` slices. Matches, shots and
+events are filtered **client-side by date/season**, so the 800 KB+ `player_events.js` is **not**
+duplicated per season. A season with no data renders a friendly empty state on every tab.
+
+### ⚠️ TODO — 2026/27 needs a new data pipeline
+
+There is **no fixture or match feed for 2026/27 yet**, so the season is selectable but empty. The
+old FotMob endpoints in `fetch_results.py` are **dead (HTTP 404)**, so a new collector is required:
+
+1. Pull the **2026/27 La Liga schedule** (then cup / UCL fixtures) from a working source.
+2. After each match, fetch its WhoScored feed and write `assets/data/match_<id>_cache.json` with a
+   `startDate` of `2026-08` or later (the same shape the existing scraper produces).
+3. Run `py build_dashboard.py`.
+
+`season_of(date)` then buckets those caches into **2026/27 automatically** — no frontend or data-
+schema changes needed. Until that pipeline exists, the 2026/27 tab intentionally shows empty
+states pointing here.
 
 ---
 

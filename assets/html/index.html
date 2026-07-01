@@ -10,8 +10,12 @@
 <header class="site">
   <div class="header-inner">
     <div class="brand">
-      <div class="title">FC <span>Barcelona</span> · 2025/26 Dashboard</div>
+      <div class="title">FC <span>Barcelona</span> · <span id="brandSeason">2025/26</span> Dashboard</div>
       <div class="sub">Season overview · fixtures &amp; results · player &amp; xG lab</div>
+    </div>
+    <div class="season-switch">
+      <label for="seasonSel">Season</label>
+      <select id="seasonSel" aria-label="Choose season"></select>
     </div>
     <nav class="tabs">
       <button data-view="overview" class="active">Overview</button>
@@ -195,6 +199,7 @@
          <b style="color:#43e8a0">green = goal</b>, <b style="color:#ff5e7a">filled red = on target</b>,
          hollow red = off target / blocked. Take-ons, tackles &amp; passes use the full pitch (attacking &rarr;) with
          <b style="color:#43e8a0">green</b> = success, <b style="color:#ff5e7a">red</b> = fail arrows.
+         Each map lists its <b>totals with the success / conversion split</b>.
          <b>Hover any mark</b> for the minute, xG and the game.</p>
       <div class="grid-2" style="margin:0 0 6px">
         <div id="plHeatNameA" style="font-weight:800;color:#3ddc97"></div>

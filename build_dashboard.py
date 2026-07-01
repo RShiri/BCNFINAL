@@ -33,6 +33,30 @@ CARD, CARD2, LINE, BG, BG2 = "#161d31", "#1b2440", "#26304d", "#0b0f1a", "#12182
 
 
 # ---------------------------------------------------------------------------
+# SEASON HELPERS  – derive the football season a match belongs to from its date.
+# A season runs Jul->Jun, so any match_*_cache.json dated 2026-07 or later is
+# automatically bucketed into 2026/27 (see DEVELOPER_GUIDE for the 26/27 pipeline).
+# ---------------------------------------------------------------------------
+def season_of(date):
+    """'YYYY-MM-DD' -> 'YYYY/YY'. e.g. '2025-08-16' -> '2025/26', '2026-06-14' -> '2025/26'."""
+    try:
+        y, m = int(str(date)[:4]), int(str(date)[5:7])
+    except (ValueError, TypeError):
+        return ""
+    start = y if m >= 7 else y - 1
+    return f"{start}/{(start + 1) % 100:02d}"
+
+
+def next_season(season):
+    """'2025/26' -> '2026/27' (the upcoming season, offered in the UI before data exists)."""
+    try:
+        start = int(str(season)[:4]) + 1
+    except (ValueError, TypeError):
+        return ""
+    return f"{start}/{(start + 1) % 100:02d}"
+
+
+# ---------------------------------------------------------------------------
 # TEAM BADGES  – resolve a team name to a logo file, copy into assets/html/logos
 # ---------------------------------------------------------------------------
 _LOGO_FILES = os.listdir(LOGO_SRC) if os.path.isdir(LOGO_SRC) else []
@@ -324,7 +348,8 @@ def aggregate_player_events(matches):
         mid = m["mid"]
         if mid not in game_idx:
             game_idx[mid] = len(games)
-            games.append([m["opp_name"], m["date"]])
+            # [opponent, date, season] — season lets the client filter events per season
+            games.append([m["opp_name"], m["date"], season_of(m["date"])])
         gi = game_idx[mid]
         side = "home" if m["bcn_is_home"] else "away"
         team = d.get(side, {})
@@ -400,7 +425,7 @@ def aggregate_player_events(matches):
 # ---------------------------------------------------------------------------
 # SEASON / COMPETITION AGGREGATES
 # ---------------------------------------------------------------------------
-def build_data(matches):
+def _season_totals(matches):
     n = len(matches)
     w = sum(1 for m in matches if m["result"] == "W")
     d = sum(1 for m in matches if m["result"] == "D")
@@ -408,7 +433,7 @@ def build_data(matches):
     gf = sum(m["bcn_goals"] for m in matches)
     ga = sum(m["opp_goals"] for m in matches)
     n_xg = sum(1 for m in matches if m["bcn_xg"])
-    totals = {
+    return {
         "p": n, "w": w, "d": d, "l": l, "gf": gf, "ga": ga, "gd": gf - ga,
         "cs": sum(1 for m in matches if m["opp_goals"] == 0),
         "fs": sum(1 for m in matches if m["bcn_goals"] == 0),
@@ -419,6 +444,8 @@ def build_data(matches):
         "win_pct": round(100 * w / n) if n else 0,
     }
 
+
+def _season_by_comp(matches):
     comps = {}
     for m in matches:
         c = comps.setdefault(m["comp"], {"comp": m["comp"], "p": 0, "w": 0, "d": 0,
@@ -434,11 +461,34 @@ def build_data(matches):
     for c in by_comp:
         c["pts"] = 3 * c["w"] + c["d"]
         c["gd"] = c["gf"] - c["ga"]
+    return by_comp
 
-    players, pshots = aggregate_players(matches)
 
-    # slim per-match records for the app
-    keep = ("mid", "date", "comp", "home", "away", "home_score", "away_score",
+def build_data(matches):
+    # Seasons present in the data, plus the upcoming one so the UI can offer 2026/27
+    # even before any fixture data exists for it.
+    data_seasons = sorted({m["season"] for m in matches if m.get("season")})
+    upcoming = next_season(data_seasons[-1]) if data_seasons else ""
+    season_keys = list(data_seasons)
+    if upcoming and upcoming not in season_keys:
+        season_keys.append(upcoming)
+
+    # Per-season totals / competition table / player aggregates, plus a combined
+    # 'all'. Player shots stay a single global dict — each shot carries its date, so
+    # the client filters them by season without duplicating this data.
+    players_all, pshots = aggregate_players(matches)
+    seasons = {"all": {"totals": _season_totals(matches),
+                       "byComp": _season_by_comp(matches),
+                       "players": players_all}}
+    for s in season_keys:
+        sub = [m for m in matches if m.get("season") == s]
+        players_s, _ = aggregate_players(sub)
+        seasons[s] = {"totals": _season_totals(sub),
+                      "byComp": _season_by_comp(sub),
+                      "players": players_s}
+
+    # slim per-match records for the app (now carrying the season tag)
+    keep = ("mid", "date", "season", "comp", "home", "away", "home_score", "away_score",
             "bcn_is_home", "opp_name", "bcn_goals", "opp_goals", "result",
             "bcn_xg", "opp_xg", "xg_h", "xg_a", "xg_source", "venue", "referee",
             "attendance", "h_shots", "a_shots", "h_sot", "a_sot", "h_poss", "a_poss",
@@ -451,15 +501,19 @@ def build_data(matches):
         rec["away_logo"] = team_logo(m["away"])
         match_recs.append(rec)
 
+    season_labels = {s: s for s in season_keys}
+    season_labels["all"] = "All seasons"
+
     return {
         "team": "FC Barcelona",
-        "season": "2025/26",
+        # Default to the latest season that actually has data (2025/26 for now).
+        "defaultSeason": data_seasons[-1] if data_seasons else "all",
+        "seasonList": season_keys + ["all"],
+        "seasonLabels": season_labels,
         "updated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
         "bcnLogo": team_logo("Barcelona"),
-        "totals": totals,
-        "byComp": by_comp,
+        "seasons": seasons,
         "matches": match_recs,
-        "players": players,
         "playerShots": pshots,
     }
 
@@ -931,11 +985,22 @@ def main():
             m["comp"] = "La Liga"
         if m["mid"] in COMP_OVERRIDE:
             m["comp"] = COMP_OVERRIDE[m["mid"]]
+    # Tag every match with the season it belongs to (Jul->Jun). New 2026/27 caches
+    # dropped into assets/data are picked up here automatically.
+    for m in matches:
+        m["season"] = season_of(m["date"])
     print(f"  {len(matches)} Barcelona matches loaded")
+    _scount = {}
+    for m in matches:
+        _scount[m["season"]] = _scount.get(m["season"], 0) + 1
+    print(f"  seasons: {_scount}")
 
     print("Aggregating season + players...")
     data = build_data(matches)
-    print(f"  {len(data['players'])} players, {len(data['byComp'])} competitions")
+    _def = data["defaultSeason"]
+    print(f"  seasons: {data['seasonList']} (default {_def})")
+    print(f"  {len(data['seasons'][_def]['players'])} players, "
+          f"{len(data['seasons'][_def]['byComp'])} competitions in {_def}")
 
     # data.js
     out = os.path.join(HTML_DIR, "data.js")
