@@ -843,7 +843,8 @@ def build_match_detail(m, d):
                     recv = pid2name.get(ne.get("playerId"), ""); break
         passes.append({
             "team": side, "player": pid2name.get(ev.get("playerId"), ""), "recv": recv,
-            "ok": ok, "x": x, "y": y, "ex": ex, "ey": ey, "min": ev.get("minute"),
+            "ok": ok, "x": x, "y": y, "ex": ex, "ey": ey,
+            "min": ev.get("minute"), "sec": ev.get("second"),
             "prog": bool(ok and (ex - x) >= 15 and ex >= 50),
             "key": "KeyPass" in qs, "assist": "IntentionalGoalAssist" in qs, "cross": "Cross" in qs,
         })
@@ -860,7 +861,7 @@ def build_match_detail(m, d):
             "team": side, "player": pid2name.get(ev.get("playerId"), ""),
             "x": round(ev.get("x", 0) or 0, 1), "y": round(ev.get("y", 0) or 0, 1),
             "ok": ev.get("outcomeType", {}).get("displayName") == "Successful",
-            "min": ev.get("minute"),
+            "min": ev.get("minute"), "sec": ev.get("second"),
         })
 
     # ---- goals ----
@@ -890,7 +891,7 @@ def build_match_detail(m, d):
         side = sd(ev.get("teamId"))
         if not side:
             continue
-        saves.append({"team": side, "min": ev.get("minute"),
+        saves.append({"team": side, "min": ev.get("minute"), "sec": ev.get("second"),
                       "x": round(ev.get("x", 0) or 0, 1), "y": round(ev.get("y", 0) or 0, 1)})
 
     # ---- line-ups ----
