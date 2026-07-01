@@ -92,7 +92,7 @@
           esc(m.date + "  " + m.home + " " + m.home_score + "-" + m.away_score + " " + m.away) + '"></div>';
       }).join("") + "</div>";
     $("#timeline").querySelectorAll(".tl-bar").forEach(function (b) {
-      b.addEventListener("click", function () { location.href = "match_" + b.dataset.mid + ".html"; });
+      b.addEventListener("click", function () { location.href = "match.html?id=" + b.dataset.mid; });
     });
   }
 
@@ -117,8 +117,8 @@
       statRow(m.h_duel, m.a_duel, "Duels Won") +
       statRow(m.h_saves, m.a_saves, "Saves") +
       statRow(m.h_fouls, m.a_fouls, "Fouls") +
-      '<div style="text-align:right;padding:6px 2px 2px"><a class="open-match" href="match_' + m.mid +
-      '.html">Open Match Centre &rarr;</a></div></div>';
+      '<div style="text-align:right;padding:6px 2px 2px"><a class="open-match" href="match.html?id=' + m.mid +
+      '">Open Match Centre &rarr;</a></div></div>';
   }
   function logoImg(u) { return u ? '<img class="tlogo" src="' + u + '" alt="" loading="lazy">' : ""; }
   function bcnName(m, side) {
@@ -141,18 +141,16 @@
     host.innerHTML = list.map(function (m) {
       return '<div class="db-match" data-mid="' + m.mid + '" style="box-shadow:inset 3px 0 0 ' + (COMP_COL[m.comp] || BLUE) + '">' +
         '<div class="db-match-head"><div class="db-date">' + esc(m.date) +
-        ' <span class="chev">&#9660;</span></div>' +
+        ' <span class="chev nav">&#8599;</span></div>' +
         '<div class="side home">' + bcnName(m, "home") + "</div>" +
         '<div class="score">' + m.home_score + " &ndash; " + m.away_score + "</div>" +
         '<div class="side away">' + bcnName(m, "away") + "</div>" +
         '<div class="open-links">' + compPill(m.comp) + badge(m.result) + '</div></div></div>';
     }).join("");
     host.querySelectorAll(".db-match").forEach(function (row) {
+      row.style.cursor = "pointer";
       row.querySelector(".db-match-head").addEventListener("click", function () {
-        var open = row.classList.toggle("open");
-        var m = M.filter(function (x) { return x.mid === row.dataset.mid; })[0];
-        if (open) { var p = document.createElement("div"); p.innerHTML = statPanel(m); row.appendChild(p.firstChild); }
-        else { var ex = row.querySelector(".stat-panel"); if (ex) ex.remove(); }
+        location.href = "match.html?id=" + row.dataset.mid;
       });
     });
   }
@@ -491,8 +489,28 @@
     pitchShotMap($("#plMap"), shots);
 
     var pool = P.filter(function (q) { return q.mins >= 120; });
-    var players = [p]; if (cmp) { var pc = playerByName(cmp); if (pc) players.push(pc); }
+    var pc = cmp ? playerByName(cmp) : null;
+    var players = [p]; if (pc) players.push(pc);
     radar($("#plRadar"), players, pool.length ? pool : P);
+
+    // side-by-side head-to-head comparison
+    var cmpCard = $("#plCompareCard");
+    if (pc) {
+      $("#plCompareTitle").innerHTML = esc(main) + " vs " + esc(cmp);
+      var metrics = [["shots", "Shots"], ["drib", "Take-ons won"], ["tackles", "Tackles"],
+                     ["passes", "Passes"], ["prog", "Progressive passes"]];
+      $("#plCompareBody").innerHTML = metrics.map(function (mt) {
+        var a = p[mt[0]] || 0, b = pc[mt[0]] || 0, t = (a + b) || 1, ap = Math.round(100 * a / t);
+        return '<div class="stat-cmp"><div class="sc-val' + (a >= b ? " win" : "") + '">' + a + '</div>' +
+          '<div><div class="sc-label">' + mt[1] + '</div><div class="sc-bar">' +
+          '<div class="sc-fill h" style="width:' + ap + '%"></div>' +
+          '<div class="sc-fill a" style="width:' + (100 - ap) + '%"></div></div></div>' +
+          '<div class="sc-val' + (b > a ? " win" : "") + '">' + b + "</div></div>";
+      }).join("");
+      cmpCard.style.display = "";
+    } else {
+      cmpCard.style.display = "none";
+    }
   }
   function initPlayerLab() {
     var opts = P.filter(function (p) { return p.apps > 0; })
@@ -518,7 +536,7 @@
       return true;
     }).slice().reverse();
     $("#shotGrid").innerHTML = list.map(function (m) {
-      return '<a class="group-card" href="match_' + m.mid + '.html" style="display:block;text-decoration:none;color:inherit;box-shadow:inset 3px 0 0 ' + RES_COL[m.result] + '">' +
+      return '<a class="group-card" href="match.html?id=' + m.mid + '" style="display:block;text-decoration:none;color:inherit;box-shadow:inset 3px 0 0 ' + RES_COL[m.result] + '">' +
         '<div style="padding:14px 16px">' +
         '<div style="display:flex;justify-content:space-between;font-size:11px;color:' + MUTED + ';margin-bottom:8px">' +
         '<span>' + esc(m.date) + "</span>" + compPill(m.comp) + "</div>" +

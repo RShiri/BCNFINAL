@@ -151,7 +151,7 @@ def aggregate_players(matches):
             e = players[name] = {
                 "name": name, "pos": pos, "apps": 0, "starts": 0, "mins": 0,
                 "goals": 0, "assists": 0, "shots": 0, "sot": 0, "keyp": 0,
-                "passes": 0, "pacc_num": 0, "drib": 0, "tackles": 0, "intc": 0,
+                "passes": 0, "pacc_num": 0, "drib": 0, "tackles": 0, "intc": 0, "prog": 0,
                 "aerials": 0, "touches": 0, "fouls": 0, "yellow": 0, "red": 0,
                 "rating_sum": 0.0, "rating_n": 0, "xg": 0.0,
             }
@@ -197,8 +197,8 @@ def aggregate_players(matches):
                     "opp": m["opp_name"], "date": m["date"], "mid": m["mid"],
                 })
 
-        # --- goals / assists / cards from the event stream ---
-        goals_by, assist_by, yel_by, red_by = {}, {}, {}, {}
+        # --- goals / assists / cards / progressive passes from the event stream ---
+        goals_by, assist_by, yel_by, red_by, prog_by = {}, {}, {}, {}, {}
         for ev in d.get("events", []):
             if ev.get("teamId") != team_id:
                 continue
@@ -217,6 +217,20 @@ def aggregate_players(matches):
                     red_by[nm] = red_by.get(nm, 0) + 1
                 elif "Yellow" in qs:
                     yel_by[nm] = yel_by.get(nm, 0) + 1
+            if etype == "Pass" and ev.get("outcomeType", {}).get("displayName") == "Successful":
+                x = ev.get("x", 0) or 0
+                ex = None
+                for q in ev.get("qualifiers", []):
+                    if q.get("type", {}).get("displayName") == "PassEndX":
+                        try:
+                            ex = float(q.get("value"))
+                        except (TypeError, ValueError):
+                            ex = None
+                        break
+                if ex is None:
+                    ex = ev.get("endX", x) or x
+                if (ex - x) >= 15 and ex >= 50:
+                    prog_by[nm] = prog_by.get(nm, 0) + 1
 
         # --- stat-sheet aggregation ---
         for p in team.get("players", []):
@@ -246,6 +260,7 @@ def aggregate_players(matches):
                 e["rating_n"]   += 1
             e["goals"]   += goals_by.get(nm, 0)
             e["assists"] += assist_by.get(nm, 0)
+            e["prog"]    += prog_by.get(nm, 0)
             e["yellow"]  += yel_by.get(nm, 0)
             e["red"]     += red_by.get(nm, 0)
             e["xg"]      += xg_by_name.get(nm, 0.0)
@@ -261,7 +276,7 @@ def aggregate_players(matches):
             "mins": e["mins"], "goals": e["goals"], "assists": e["assists"],
             "ga": e["goals"] + e["assists"], "shots": e["shots"], "sot": e["sot"],
             "keyp": e["keyp"], "passes": e["passes"], "pacc": pacc, "drib": e["drib"],
-            "tackles": e["tackles"], "intc": e["intc"], "aerials": e["aerials"],
+            "tackles": e["tackles"], "intc": e["intc"], "aerials": e["aerials"], "prog": e["prog"],
             "touches": e["touches"], "fouls": e["fouls"], "yellow": e["yellow"],
             "red": e["red"], "rating": rating,
             "xg": round(e["xg"], 2), "xgd": round(e["goals"] - e["xg"], 2),
@@ -526,6 +541,248 @@ def build_match_svg(m, d, prev_mid, next_mid):
 
 
 # ---------------------------------------------------------------------------
+# MATCH CENTRE DETAIL  (window.MATCH_DETAIL for the ported WC2026 match.js)
+# ---------------------------------------------------------------------------
+MC_LOGO_DST = os.path.join(HTML_DIR, "mclogos")
+BARCA_COL, OPP_COL = "#e0224e", "#4ea1ff"
+_SHOT_TYPES = {"Goal", "MissedShots", "SavedShot", "ShotOnPost"}
+
+
+def _qset(ev):
+    return {q.get("type", {}).get("displayName", "") for q in ev.get("qualifiers", [])}
+
+
+def _qval(ev, name):
+    for q in ev.get("qualifiers", []):
+        if q.get("type", {}).get("displayName") == name:
+            v = q.get("value")
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                return v
+    return None
+
+
+def mc_logo(name):
+    """Ensure assets/html/mclogos/<name>.png exists (match.js expects name-keyed files)."""
+    rel = team_logo(name)              # copies into logos/<slug>.png and returns that path
+    if not rel:
+        return
+    os.makedirs(MC_LOGO_DST, exist_ok=True)
+    dst = os.path.join(MC_LOGO_DST, name + ".png")
+    if not os.path.exists(dst):
+        try:
+            shutil.copyfile(os.path.join(HTML_DIR, rel), dst)
+        except Exception:
+            pass
+
+
+def build_match_detail(m, d):
+    hid = d.get("home", {}).get("teamId")
+    aid = d.get("away", {}).get("teamId")
+    pid2name = {}
+    for side in ("home", "away"):
+        for p in d.get(side, {}).get("players", []):
+            pid2name[p.get("playerId")] = p.get("name")
+    for k, v in (d.get("playerIdNameDictionary") or {}).items():
+        try:
+            pid2name.setdefault(int(k), v)
+        except (TypeError, ValueError):
+            pass
+    maxmin = d.get("maxMinute") or 90
+    events = d.get("events", [])
+
+    def sd(tid):
+        return "home" if tid == hid else ("away" if tid == aid else None)
+
+    # ---- per-player goals / assists / cards / sub minutes (both teams) ----
+    goals_by, assist_by, yc_by, rc_by, subon = {}, {}, {}, {}, {}
+    for ev in events:
+        pid = ev.get("playerId")
+        et = ev.get("type", {}).get("displayName", "")
+        qs = _qset(ev)
+        if et == "Goal" and "OwnGoal" not in qs:
+            goals_by[pid] = goals_by.get(pid, 0) + 1
+        if "IntentionalGoalAssist" in qs:
+            assist_by[pid] = assist_by.get(pid, 0) + 1
+        if et == "Card":
+            if "Red" in qs or "SecondYellow" in qs:
+                rc_by[pid] = rc_by.get(pid, 0) + 1
+            elif "Yellow" in qs:
+                yc_by[pid] = yc_by.get(pid, 0) + 1
+        if et == "SubstitutionOn":
+            subon[pid] = ev.get("minute")
+
+    # ---- shots (raw WhoScored coords 0-100) + model xG ----
+    def raw_shots(side_key, team_id, team_name):
+        rs = []
+        for ev in events:
+            if ev.get("teamId") != team_id:
+                continue
+            et = ev.get("type", {}).get("displayName", "")
+            if et not in _SHOT_TYPES:
+                continue
+            qs = _qset(ev)
+            blocked = "Blocked" in qs
+            goal = et == "Goal" and "OwnGoal" not in qs
+            ot = (et in ("Goal", "SavedShot")) and not blocked
+            rs.append({
+                "team": side_key, "x": round(ev.get("x", 0) or 0, 1), "y": round(ev.get("y", 0) or 0, 1),
+                "min": ev.get("minute"), "sec": ev.get("second"),
+                "player": pid2name.get(ev.get("playerId"), ""),
+                "goal": goal, "onTarget": bool(ot), "blocked": blocked,
+                "big": "BigChance" in qs,
+                "gy": _qval(ev, "GoalMouthY"), "gz": _qval(ev, "GoalMouthZ"), "xg": 0.05,
+            })
+        # attach model xG in event order (build_shot_df iterates events in the same order)
+        try:
+            df = bw._build_shot_df(d, team_name) if bw._build_shot_df else None
+            rows = df.to_dict("records") if df is not None else []
+        except Exception:
+            rows = []
+        if len(rows) == len(rs):
+            for r, srow in zip(rs, rows):
+                r["xg"] = round(float(srow.get("xG", 0) or 0), 3)
+        else:
+            used = [False] * len(rows)
+            for r in rs:
+                for i, srow in enumerate(rows):
+                    if not used[i] and srow.get("minute") == r["min"]:
+                        r["xg"] = round(float(srow.get("xG", 0) or 0), 3)
+                        used[i] = True
+                        break
+        return rs
+
+    shots = raw_shots("home", hid, d["home"]["name"]) + raw_shots("away", aid, d["away"]["name"])
+
+    # ---- passes ----
+    passes = []
+    n = len(events)
+    for i, ev in enumerate(events):
+        if ev.get("type", {}).get("displayName") != "Pass":
+            continue
+        side = sd(ev.get("teamId"))
+        if not side:
+            continue
+        ok = ev.get("outcomeType", {}).get("displayName") == "Successful"
+        qs = _qset(ev)
+        x = round(ev.get("x", 0) or 0, 1); y = round(ev.get("y", 0) or 0, 1)
+        ex = _qval(ev, "PassEndX"); ey = _qval(ev, "PassEndY")
+        ex = round(ex, 1) if ex is not None else round(ev.get("endX", x) or x, 1)
+        ey = round(ey, 1) if ey is not None else round(ev.get("endY", y) or y, 1)
+        recv = ""
+        if ok:
+            for j in range(i + 1, min(i + 4, n)):
+                ne = events[j]
+                if ne.get("teamId") == ev.get("teamId") and ne.get("playerId"):
+                    recv = pid2name.get(ne.get("playerId"), ""); break
+        passes.append({
+            "team": side, "player": pid2name.get(ev.get("playerId"), ""), "recv": recv,
+            "ok": ok, "x": x, "y": y, "ex": ex, "ey": ey, "min": ev.get("minute"),
+            "prog": bool(ok and (ex - x) >= 15 and ex >= 50),
+            "key": "KeyPass" in qs, "assist": "IntentionalGoalAssist" in qs, "cross": "Cross" in qs,
+        })
+
+    # ---- dribbles (take-ons) ----
+    dribbles = []
+    for ev in events:
+        if ev.get("type", {}).get("displayName") != "TakeOn":
+            continue
+        side = sd(ev.get("teamId"))
+        if not side:
+            continue
+        dribbles.append({
+            "team": side, "player": pid2name.get(ev.get("playerId"), ""),
+            "x": round(ev.get("x", 0) or 0, 1), "y": round(ev.get("y", 0) or 0, 1),
+            "ok": ev.get("outcomeType", {}).get("displayName") == "Successful",
+            "min": ev.get("minute"),
+        })
+
+    # ---- goals ----
+    goals = []
+    for i, ev in enumerate(events):
+        if ev.get("type", {}).get("displayName") != "Goal":
+            continue
+        side = sd(ev.get("teamId"))
+        qs = _qset(ev)
+        own = "OwnGoal" in qs
+        gteam = side if not own else ("away" if side == "home" else "home")
+        assist = ""
+        for j in range(max(0, i - 4), i):
+            pe = events[j]
+            if pe.get("teamId") == ev.get("teamId") and "IntentionalGoalAssist" in _qset(pe):
+                assist = pid2name.get(pe.get("playerId"), ""); break
+        goals.append({
+            "team": gteam, "min": ev.get("minute"), "scorer": pid2name.get(ev.get("playerId"), ""),
+            "assist": assist, "pen": "Penalty" in qs, "own": own,
+        })
+
+    # ---- saves ----
+    saves = []
+    for ev in events:
+        if ev.get("type", {}).get("displayName") != "Save":
+            continue
+        side = sd(ev.get("teamId"))
+        if not side:
+            continue
+        saves.append({"team": side, "min": ev.get("minute"),
+                      "x": round(ev.get("x", 0) or 0, 1), "y": round(ev.get("y", 0) or 0, 1)})
+
+    # ---- line-ups ----
+    def lineup(side_key):
+        starters, subs = [], []
+        for p in d.get(side_key, {}).get("players", []):
+            st = p.get("stats", {})
+            mins = _player_minutes(d, p, maxmin)
+            if not st and not mins and not p.get("isFirstEleven"):
+                continue
+            r = _final_rating(st)
+            pid = p.get("playerId")
+            rec = {
+                "name": p.get("name"), "num": p.get("shirtNo"), "pos": p.get("position", ""),
+                "mins": mins, "rating": round(r, 1) if r else None,
+                "g": goals_by.get(pid, 0), "a": assist_by.get(pid, 0),
+                "yc": yc_by.get(pid, 0), "rc": rc_by.get(pid, 0),
+                "motm": bool(p.get("isManOfTheMatch")),
+            }
+            if p.get("isFirstEleven"):
+                starters.append(rec)
+            else:
+                rec["on"] = subon.get(pid)
+                subs.append(rec)
+        subs.sort(key=lambda x: (x.get("on") is None, x.get("on") or 0))
+        return {"starters": starters, "subs": subs}
+
+    comp_lbl = {"UCL": "Champions League", "Copa": "Copa del Rey"}.get(m["comp"], m["comp"])
+    hcol = BARCA_COL if m["bcn_is_home"] else OPP_COL
+    acol = OPP_COL if m["bcn_is_home"] else BARCA_COL
+    mc_logo(m["home"]); mc_logo(m["away"])
+
+    rec = {"stats": {
+        "possession": [m["h_poss"], m["a_poss"]],
+        "xg": [round(m["xg_h"], 2), round(m["xg_a"], 2)],
+        "shots": [m["h_shots"], m["a_shots"]],
+        "sot": [m["h_sot"], m["a_sot"]],
+        "big_chances": [m["h_bcc"], m["a_bcc"]],
+        "passes": [m["h_passes"], m["a_passes"]],
+        "pass_acc": [m["h_pacc_pct"], m["a_pacc_pct"]],
+        "saves": [m["h_saves"], m["a_saves"]],
+        "duels_won": [m["h_duel"], m["a_duel"]],
+        "fouls": [m["h_fouls"], m["a_fouls"]],
+    }, "sources": ["whoscored"]}
+
+    return {
+        "id": m["mid"], "date": m["date"], "stage": comp_lbl, "venue": m.get("venue", ""),
+        "maxMin": maxmin,
+        "home": {"name": m["home"], "score": m["home_score"], "color": hcol},
+        "away": {"name": m["away"], "score": m["away_score"], "color": acol},
+        "shots": shots, "passes": passes, "dribbles": dribbles, "goals": goals,
+        "saves": saves, "lineups": {"home": lineup("home"), "away": lineup("away")},
+        "rec": rec,
+    }
+
+
+# ---------------------------------------------------------------------------
 # MAIN
 # ---------------------------------------------------------------------------
 def main():
@@ -579,14 +836,14 @@ def main():
         f.write(";\n")
     print(f"  data.js  ({os.path.getsize(out)//1024}KB)")
 
-    # SVG match pages (WC2026 style — no PNGs, no Plotly)
-    print("Building SVG match pages...")
+    # Match-centre detail files (window.MATCH_DETAIL, consumed by the ported match.js)
+    print("Building match-centre detail files...")
+    detail_dir = os.path.join(HTML_DIR, "matches_detail")
+    os.makedirs(detail_dir, exist_ok=True)
     files = {os.path.basename(f).split("_")[1]: f
              for f in glob.glob(os.path.join(DATA_DIR, "match_*_cache.json"))}
     written = 0
-    for i, m in enumerate(matches):
-        prev_mid = matches[i - 1]["mid"] if i > 0 else None
-        next_mid = matches[i + 1]["mid"] if i < len(matches) - 1 else None
+    for m in matches:
         f = files.get(m["mid"])
         if not f:
             continue
@@ -594,12 +851,18 @@ def main():
             d = json.load(open(f, encoding="utf-8"))
         except Exception:
             continue
-        html = build_match_svg(m, d, prev_mid, next_mid)
-        with open(os.path.join(HTML_DIR, f"match_{m['mid']}.html"), "w", encoding="utf-8") as fh:
-            fh.write(html)
+        try:
+            detail = build_match_detail(m, d)
+        except Exception as e:
+            print(f"  WARN match {m['mid']}: {e}")
+            continue
+        with open(os.path.join(detail_dir, f"{m['mid']}.js"), "w", encoding="utf-8") as fh:
+            fh.write("window.MATCH_DETAIL = ")
+            json.dump(detail, fh, ensure_ascii=True, separators=(",", ":"))
+            fh.write(";\n")
         written += 1
-    print(f"  {written} SVG match pages written")
-    print("\nDone.  index.html + app.js are static; data.js regenerated.")
+    print(f"  {written} match-centre detail files written")
+    print("\nDone.  index.html + app.js + match.html + match.js are static; data regenerated.")
 
 
 if __name__ == "__main__":
