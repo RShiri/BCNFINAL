@@ -217,7 +217,8 @@ def aggregate_players(matches):
                     red_by[nm] = red_by.get(nm, 0) + 1
                 elif "Yellow" in qs:
                     yel_by[nm] = yel_by.get(nm, 0) + 1
-            if etype == "Pass" and ev.get("outcomeType", {}).get("displayName") == "Successful":
+            ex_ok = etype == "Pass" and ev.get("outcomeType", {}).get("displayName") == "Successful"
+            if ex_ok:
                 x = ev.get("x", 0) or 0
                 ex = None
                 for q in ev.get("qualifiers", []):
@@ -284,6 +285,107 @@ def aggregate_players(matches):
     out.sort(key=lambda p: (-p["ga"], -p["goals"], -p["rating"]))
     # round shot xg lists already done
     return out, pshots
+
+
+# ---------------------------------------------------------------------------
+# PER-PLAYER EVENT LOCATIONS  (for the Player Lab match-centre-style graphs)
+# ---------------------------------------------------------------------------
+def aggregate_player_events(matches):
+    """For each Barcelona player, collect season event locations (raw WhoScored
+    0-100 coords) so the Player Lab can draw the same graphs as the match centre:
+      shots    -> [x, y, gy, xg, goal, ontarget]
+      dribbles -> [x, y, ex, ey, ok]     (ex/ey = next touch; -1 if none)
+      tackles  -> [x, y, ok]
+      passes   -> [x, y, ex, ey, ok, prog]
+    """
+    files = {os.path.basename(f).split("_")[1]: f
+             for f in glob.glob(os.path.join(DATA_DIR, "match_*_cache.json"))}
+    ev = {}
+
+    def rec(nm):
+        e = ev.get(nm)
+        if e is None:
+            e = ev[nm] = {"shots": [], "dribbles": [], "tackles": [], "passes": []}
+        return e
+
+    def ri(v):
+        return int(round(v or 0))
+
+    for m in matches:
+        f = files.get(m["mid"])
+        if not f:
+            continue
+        try:
+            d = json.load(open(f, encoding="utf-8"))
+        except Exception:
+            continue
+        side = "home" if m["bcn_is_home"] else "away"
+        team = d.get(side, {})
+        tid = team.get("teamId"); tname = team.get("name", "")
+        pid2name = {p.get("playerId"): p.get("name") for p in team.get("players", [])}
+        events = d.get("events", [])
+
+        # shots (+ model xG, zipped in event order)
+        raw_sh = [e for e in events if e.get("teamId") == tid
+                  and e.get("type", {}).get("displayName", "") in _SHOT_TYPES]
+        try:
+            df = bw._build_shot_df(d, tname) if bw._build_shot_df else None
+            xrows = df.to_dict("records") if df is not None else []
+        except Exception:
+            xrows = []
+        for i, e in enumerate(raw_sh):
+            nm = pid2name.get(e.get("playerId"))
+            if not nm:
+                continue
+            qs = _qset(e)
+            et = e.get("type", {}).get("displayName", "")
+            xg = round(float(xrows[i].get("xG", 0) or 0), 3) if (len(xrows) == len(raw_sh) and i < len(xrows)) else 0.05
+            goal = 1 if (et == "Goal" and "OwnGoal" not in qs) else 0
+            ot = 1 if (et in ("Goal", "SavedShot") and "Blocked" not in qs) else 0
+            gy = _qval(e, "GoalMouthY")
+            rec(nm)["shots"].append([ri(e.get("x")), ri(e.get("y")),
+                                     ri(gy) if gy is not None else 50, xg, goal, ot])
+
+        # per-player on-ball timeline (for dribble carry direction)
+        touches = {}
+        for e in events:
+            if e.get("teamId") != tid:
+                continue
+            t = e.get("type", {}).get("displayName", "")
+            if t == "Pass" or t == "TakeOn" or t in _SHOT_TYPES:
+                nm = pid2name.get(e.get("playerId"))
+                if nm:
+                    tt = (e.get("minute") or 0) * 60 + (e.get("second") or 0)
+                    touches.setdefault(nm, []).append((tt, e.get("x") or 0, e.get("y") or 0))
+        for nm in touches:
+            touches[nm].sort()
+
+        for e in events:
+            if e.get("teamId") != tid:
+                continue
+            t = e.get("type", {}).get("displayName", "")
+            nm = pid2name.get(e.get("playerId"))
+            if not nm:
+                continue
+            ok = e.get("outcomeType", {}).get("displayName") == "Successful"
+            x = e.get("x") or 0; y = e.get("y") or 0
+            if t == "TakeOn":
+                tt = (e.get("minute") or 0) * 60 + (e.get("second") or 0)
+                exy = (-1, -1)
+                for (t2, x2, y2) in touches.get(nm, []):
+                    if t2 > tt and t2 - tt <= 8 and (abs(x2 - x) > 0.8 or abs(y2 - y) > 0.8):
+                        exy = (ri(x2), ri(y2)); break
+                rec(nm)["dribbles"].append([ri(x), ri(y), exy[0], exy[1], 1 if ok else 0])
+            elif t == "Tackle":
+                rec(nm)["tackles"].append([ri(x), ri(y), 1 if ok else 0])
+            elif t == "Pass":
+                exq = _qval(e, "PassEndX"); eyq = _qval(e, "PassEndY")
+                ex = exq if exq is not None else (e.get("endX") or x)
+                ey = eyq if eyq is not None else (e.get("endY") or y)
+                prog = 1 if (ok and (ex - x) >= 15 and ex >= 50) else 0
+                rec(nm)["passes"].append([ri(x), ri(y), ri(ex), ri(ey), 1 if ok else 0, prog])
+
+    return ev
 
 
 # ---------------------------------------------------------------------------
@@ -835,6 +937,15 @@ def main():
         json.dump(data, f, ensure_ascii=True, separators=(",", ":"))
         f.write(";\n")
     print(f"  data.js  ({os.path.getsize(out)//1024}KB)")
+
+    # per-player event locations (separate file — only the Player Lab needs it)
+    pevents = aggregate_player_events(matches)
+    pe_out = os.path.join(HTML_DIR, "player_events.js")
+    with open(pe_out, "w", encoding="utf-8") as f:
+        f.write("window.PLAYER_EVENTS = ")
+        json.dump(pevents, f, ensure_ascii=True, separators=(",", ":"))
+        f.write(";\n")
+    print(f"  player_events.js  ({os.path.getsize(pe_out)//1024}KB)")
 
     # Match-centre detail files (window.MATCH_DETAIL, consumed by the ported match.js)
     print("Building match-centre detail files...")

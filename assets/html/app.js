@@ -7,6 +7,7 @@
   var P = D.players || [];
   var T = D.totals || {};
   var SHOTS = D.playerShots || {};
+  var PEV = window.PLAYER_EVENTS || {};
 
   var ACC = "#3ddc97", BLUE = "#4ea1ff", WARN = "#ffb454", BAD = "#ff6b81",
       MUTED = "#93a0bd", TEXT = "#e8edf7", GREY = "#7e8bb0";
@@ -429,6 +430,74 @@
       return '<span class="cl-item"><i class="cl-sw" style="background:' + cols[pi] + '"></i>' + esc(p.name) + "</span>";
     }).join("");
   }
+  // Same graphs as the Match Centre, per player. WhoScored coords 0-100, attacking right.
+  var _gid = 0;
+  function PX(x) { return x; }
+  function PY(y) { return 64 - y * 0.64; }
+  function pitchWrap(inner) {
+    return '<svg viewBox="0 0 100 64" width="100%" style="display:block;background:#101a2e;border-radius:6px">' +
+      '<rect x="0.4" y="0.4" width="99.2" height="63.2" fill="none" stroke="#26304d" stroke-width="0.4"/>' +
+      '<line x1="50" y1="0" x2="50" y2="64" stroke="#26304d" stroke-width="0.4"/>' +
+      '<circle cx="50" cy="32" r="7" fill="none" stroke="#26304d" stroke-width="0.4"/>' +
+      '<rect x="83" y="18" width="17" height="28" fill="none" stroke="#26304d" stroke-width="0.4"/>' +
+      '<rect x="0" y="18" width="17" height="28" fill="none" stroke="#26304d" stroke-width="0.4"/>' +
+      inner + '</svg>';
+  }
+  function playerGraph(host, events, kind, color) {
+    if (!host) return;
+    events = events || [];
+    // season pass maps can be 1500+ arrows — sample evenly for a readable, fast map
+    if (events.length > 350) {
+      var st = Math.ceil(events.length / 350);
+      events = events.filter(function (_, ix) { return ix % st === 0; });
+    }
+    var gid = "g" + (_gid++);
+    var s = '<defs>' +
+      '<marker id="' + gid + 'g" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4 Z" fill="#43e8a0"/></marker>' +
+      '<marker id="' + gid + 'r" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4 Z" fill="#ff5e7a"/></marker>' +
+      '</defs>';
+    if (kind === "shots") {
+      events.forEach(function (e) { // [x,y,gy,xg,goal,ot]
+        var x = PX(e[0]), y = PY(e[1]), gy = PY(e[2]), xg = e[3], goal = e[4], ot = e[5];
+        var r = 0.55 + Math.sqrt(xg) * 2.2;
+        s += '<line x1="' + x.toFixed(1) + '" y1="' + y.toFixed(1) + '" x2="100" y2="' + gy.toFixed(1) +
+          '" stroke="' + (goal ? "#ffd34e" : color) + '" stroke-width="' + (goal ? 0.35 : 0.22) +
+          '" stroke-opacity="' + (goal ? 0.9 : 0.3) + '"/>';
+        if (goal) s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (r + 0.5).toFixed(1) +
+          '" fill="none" stroke="#ffd34e" stroke-width="0.4"/>';
+        var fill = (goal || ot) ? color : "none";
+        s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + r.toFixed(1) +
+          '" fill="' + fill + '" fill-opacity="0.85" stroke="' + color + '" stroke-width="' + (fill === "none" ? 0.4 : 0) + '"/>';
+      });
+    } else if (kind === "tackles") {
+      events.forEach(function (e) { // [x,y,ok]
+        var x = PX(e[0]), y = PY(e[1]), col = e[2] ? "#43e8a0" : "#ff5e7a";
+        s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="1.1" fill="' + (e[2] ? col : "none") +
+          '" fill-opacity="0.85" stroke="' + col + '" stroke-width="0.4"/>';
+      });
+    } else { // dribbles / passes / prog — arrows
+      events.forEach(function (e) {
+        var x = PX(e[0]), y = PY(e[1]), ok, ex, ey, prog = 0;
+        if (kind === "dribbles") {
+          ok = e[4];
+          if (e[2] < 0) { // no carry end -> just the take-on dot
+            var c0 = ok ? "#43e8a0" : "#ff5e7a";
+            s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="0.9" fill="' + (ok ? c0 : "none") +
+              '" stroke="' + c0 + '" stroke-width="0.4"/>'; return;
+          }
+          ex = PX(e[2]); ey = PY(e[3]);
+        } else { // passes / prog: [x,y,ex,ey,ok,prog]
+          ex = PX(e[2]); ey = PY(e[3]); ok = e[4]; prog = kind === "prog" ? 1 : e[5];
+        }
+        var col = ok ? ((prog || kind === "prog" || kind === "dribbles") ? "#43e8a0" : "#1f9d5e") : "#ff5e7a";
+        var mk = "url(#" + gid + (ok ? "g" : "r") + ")";
+        s += '<line x1="' + x.toFixed(1) + '" y1="' + y.toFixed(1) + '" x2="' + ex.toFixed(1) + '" y2="' + ey.toFixed(1) +
+          '" stroke="' + col + '" stroke-width="' + (prog || kind === "prog" ? 0.35 : 0.22) +
+          '" stroke-opacity="0.72"' + (ok ? "" : ' stroke-dasharray="0.9 0.9"') + ' marker-end="' + mk + '"/>';
+      });
+    }
+    host.innerHTML = pitchWrap(s);
+  }
   function pitchShotMap(host, shots, title) {
     var W = 560, H = 360, pad = 8;
     var pw = W - pad * 2, ph = H - pad * 2;
@@ -507,12 +576,28 @@
           '<div class="sc-fill a" style="width:' + (100 - ap) + '%"></div></div></div>' +
           '<div class="sc-val' + (b > a ? " win" : "") + '">' + b + "</div></div>";
       }).join("");
-      // shot maps side by side
-      var sa = plShots(main), sb = plShots(cmp);
-      $("#plMapATitle").innerHTML = esc(main) + " &mdash; " + sa.length + " shots";
-      $("#plMapBTitle").innerHTML = esc(cmp) + " &mdash; " + sb.length + " shots";
-      pitchShotMap($("#plMapA"), sa);
-      pitchShotMap($("#plMapB"), sb);
+      // match-centre-style graphs, per player, side by side
+      $("#plHeatNameA").innerHTML = esc(main);
+      $("#plHeatNameB").innerHTML = esc(cmp);
+      var ea = PEV[main] || {}, eb = PEV[cmp] || {};
+      var GM = [["shots", "Shots"], ["dribbles", "Take-ons won"], ["tackles", "Tackles"],
+                ["passes", "Passes"], ["prog", "Progressive passes"]];
+      function dataFor(e, key) {
+        if (key === "prog") return (e.passes || []).filter(function (p) { return p[5]; });
+        return e[key] || [];
+      }
+      $("#plHeatGrid").innerHTML = GM.map(function (mt, i) {
+        var na = dataFor(ea, mt[0]).length, nb = dataFor(eb, mt[0]).length;
+        return '<div style="margin-bottom:14px">' +
+          '<div style="font-size:12px;color:' + MUTED + ';text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px">' +
+          mt[1] + ' <span style="color:' + ACC + '">' + na + '</span> &middot; <span style="color:' + BLUE + '">' + nb + '</span></div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+          '<div id="pg_a_' + i + '"></div><div id="pg_b_' + i + '"></div></div></div>';
+      }).join("");
+      GM.forEach(function (mt, i) {
+        playerGraph($("#pg_a_" + i), dataFor(ea, mt[0]), mt[0], ACC);
+        playerGraph($("#pg_b_" + i), dataFor(eb, mt[0]), mt[0], BLUE);
+      });
       cmpCard.style.display = "";
     } else {
       cmpCard.style.display = "none";
