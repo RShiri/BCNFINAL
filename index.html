@@ -169,56 +169,44 @@
   <section id="view-playerlab" class="view">
     <div class="section-head">
       <h2>Player Lab</h2>
-      <p>Deep-dive a single player: season stat card, every shot they took this season, and a percentile
-         fingerprint versus the rest of the squad. Pick a second player to compare.</p>
+      <p>Deep-dive one player: season stat card, the same action maps as the Match Centre, and a
+         percentile fingerprint versus the squad. Pick a second player to compare side by side.</p>
     </div>
     <div class="controls">
       <label style="color:var(--muted);font-size:13px">Player
         <select id="plMain"></select>
       </label>
       <label style="color:var(--muted);font-size:13px">Compare
-        <select id="plCompare"><option value="">— none —</option></select>
-      </label>
-      <label style="color:var(--muted);font-size:13px">Shots
-        <select id="plShotFilter">
-          <option value="all">All shots</option>
-          <option value="goal">Goals only</option>
-          <option value="ot">On target</option>
-          <option value="big">Big chances</option>
-        </select>
+        <select id="plCompare"><option value="">&mdash; none &mdash;</option></select>
       </label>
     </div>
     <div class="stats-strip" id="plStats"></div>
-    <div class="card full-card" id="plCompareCard" style="display:none;margin-bottom:18px">
+
+    <div class="card full-card" id="plBarsCard" style="display:none;margin-bottom:18px">
       <h3 id="plCompareTitle">Head-to-head</h3>
       <p class="hint">Side-by-side season totals &mdash; <b style="color:#3ddc97">green</b> = first player,
          <b style="color:#4ea1ff">blue</b> = second.</p>
       <div id="plCompareBody"></div>
-      <p class="hint" style="margin:18px 0 6px">The same maps as the Match Centre, per player, side by side
-         (attacking &rarr;). Shots = dots sized by xG with shot paths; take-ons &amp; passes = arrows
-         (<b style="color:#43e8a0">green</b> success, <b style="color:#ff5e7a">red</b> fail).</p>
+    </div>
+
+    <div class="card full-card" style="margin-bottom:18px">
+      <h3 id="plMapsTitle">Action maps</h3>
+      <p class="hint">The same maps as the Match Centre (attacking &rarr;). Shots = dots sized by xG with
+         shot paths; take-ons &amp; passes = arrows (<b style="color:#43e8a0">green</b> success,
+         <b style="color:#ff5e7a">red</b> fail). <b>Hover any mark</b> for the minute, xG and the game.</p>
       <div class="grid-2" style="margin:0 0 6px">
         <div id="plHeatNameA" style="font-weight:800;color:#3ddc97"></div>
         <div id="plHeatNameB" style="font-weight:800;color:#4ea1ff"></div>
       </div>
       <div id="plHeatGrid"></div>
     </div>
-    <div class="grid-2">
-      <div class="card full-card">
-        <h3 id="plMapTitle">Shot map</h3>
-        <p class="hint">Attacking <b>→</b> (toward the right goal). Each dot is a shot sized by xG:
-           <span style="color:#ff3d8b;font-weight:700">goals pink</span>,
-           <span style="color:#4ea1ff;font-weight:700">on-target blue</span>, off-target grey.
-           Hover a dot for details.</p>
-        <div id="plMap"></div>
-      </div>
-      <div class="card full-card">
-        <h3>Style fingerprint</h3>
-        <p class="hint">Each spoke is a <b>percentile</b> versus the rest of the squad (further out = more of
-           that trait). Comparing overlays a second player.</p>
-        <div class="so-radar-wrap" id="plRadar"></div>
-        <div class="tl-legend" id="plRadarLegend"></div>
-      </div>
+
+    <div class="card full-card">
+      <h3>Style fingerprint</h3>
+      <p class="hint">Each spoke is a <b>percentile</b> versus the rest of the squad (further out = more of
+         that trait). Comparing overlays a second player.</p>
+      <div class="so-radar-wrap" id="plRadar"></div>
+      <div class="tl-legend" id="plRadarLegend"></div>
     </div>
   </section>
 
