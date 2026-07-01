@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FC Barcelona 2025/26 — Dashboard & xG Lab</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="site">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="title">FC <span>Barcelona</span> · 2025/26 Dashboard</div>
+      <div class="sub">Season overview · fixtures &amp; results · player &amp; xG lab</div>
+    </div>
+    <nav class="tabs">
+      <button data-view="overview" class="active">Overview</button>
+      <button data-view="matches">Matches</button>
+      <button data-view="players">Players</button>
+      <button data-view="xg">xG Lab</button>
+      <button data-view="playerlab">Player Lab</button>
+      <button data-view="shots">Shot Maps</button>
+      <button data-view="data">Data</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- OVERVIEW -->
+  <section id="view-overview" class="view active">
+    <div class="section-head">
+      <h2>Season Overview</h2>
+      <p>Every FC Barcelona fixture of the 2025/26 campaign across all competitions, with the
+         expected-goals numbers behind the results.</p>
+    </div>
+    <div class="stats-strip" id="overviewStats"></div>
+    <div class="form-wrap" id="overviewForm"></div>
+
+    <div class="section-head" style="margin-top:30px">
+      <h2>Record by competition</h2>
+      <p>Played, won, drawn, lost, goals and points in each competition this season.</p>
+    </div>
+    <div class="group-grid" id="compGrid"></div>
+
+    <div class="section-head" style="margin-top:30px">
+      <h2>Results timeline</h2>
+      <p>Chronological run of results. Green = win, amber = draw, red = loss; taller bar = bigger
+         goal margin.</p>
+    </div>
+    <div class="card"><div id="timeline"></div></div>
+  </section>
+
+  <!-- MATCHES -->
+  <section id="view-matches" class="view">
+    <div class="section-head">
+      <h2>Matches</h2>
+      <p>Every fixture and result. Tap a match to open its full head-to-head stat line, or jump into
+         the interactive Match Centre. Switch to Season totals for aggregates.</p>
+    </div>
+    <div class="controls">
+      <div class="seg">
+        <button id="mModeList" class="seg-btn active">Fixtures &amp; results</button>
+        <button id="mModeTeam" class="seg-btn">Season totals</button>
+      </div>
+      <input id="mSearch" type="text" placeholder="Search opponent…" />
+      <select id="mComp">
+        <option value="all">All competitions</option>
+        <option value="La Liga">La Liga</option>
+        <option value="UCL">Champions League</option>
+        <option value="Copa">Copa del Rey</option>
+        <option value="Supercopa">Supercopa</option>
+      </select>
+    </div>
+    <div id="mListView">
+      <p class="hint" style="margin:0 0 12px">
+        xG comes from our shot model; where Understat published xG for a game we use that. Barcelona is
+        highlighted in <b class="xg-cmp" style="color:#3ddc97">green</b>.</p>
+      <div id="matchList"></div>
+    </div>
+    <div id="mTeamView" style="display:none">
+      <div class="card" style="padding:0; overflow:hidden">
+        <div class="table-scroll"><div id="teamTable"></div></div>
+      </div>
+      <p class="hint" style="margin-top:10px">Averages are per game played. Tap a column header to sort.</p>
+    </div>
+  </section>
+
+  <!-- PLAYERS -->
+  <section id="view-players" class="view">
+    <div class="section-head">
+      <h2>Player Statistics</h2>
+      <p>Aggregated across every played match from the WhoScored player feeds and the event stream —
+         goals, assists, ratings, shots, key passes, cards and more. Pick a leaderboard or sort any column.</p>
+    </div>
+    <div class="stats-strip" id="playerLeaders"></div>
+    <div class="controls">
+      <div class="seg" id="playerPresets">
+        <button class="seg-btn active" data-preset="ga">G + A</button>
+        <button class="seg-btn" data-preset="goals">Goals</button>
+        <button class="seg-btn" data-preset="assists">Assists</button>
+        <button class="seg-btn" data-preset="rating">Rating</button>
+        <button class="seg-btn" data-preset="xg">xG</button>
+        <button class="seg-btn" data-preset="keyp">Creativity</button>
+      </div>
+      <input id="playerSearch" type="text" placeholder="Search a player…" />
+      <select id="playerPos"><option value="">All positions</option></select>
+    </div>
+    <div class="card" style="padding:0; overflow:hidden">
+      <div class="table-scroll"><div id="playersTable"></div></div>
+    </div>
+    <p class="hint" style="margin-top:10px">Min = minutes · Rt = average match rating · xG± = goals minus xG
+       (finishing). Only games with player-level data are counted.</p>
+
+    <h2 style="margin:30px 0 4px;font-size:20px">Leaderboards</h2>
+    <p class="hint" style="margin:0 0 16px">Top eight players in each category so far.</p>
+    <div class="lboards" id="playerBoards"></div>
+  </section>
+
+  <!-- XG LAB -->
+  <section id="view-xg" class="view">
+    <div class="section-head">
+      <h2>xG Efficiency Lab</h2>
+      <p>Does Barcelona score as much as the quality of its chances says it should? These charts compare
+         <b>expected goals (xG)</b> with what actually happened.</p>
+    </div>
+
+    <div class="explainer">
+      <h3>New here? What is xG?</h3>
+      <p><b>Expected goals (xG)</b> rates every shot by how likely it was to be scored, from 0 to 1.
+         A tap-in from the six-yard box might be 0.7 xG; a hopeful shot from 30 metres might be 0.03 xG.
+         Add up the shots and you get how many goals an <i>average</i> finisher would have scored.</p>
+      <p>So if Barcelona racks up <b>2.5 xG but scores 1</b>, they created good chances and wasted them.
+         Score <b>3 from 1.0 xG</b> and they finished brilliantly — or got lucky.</p>
+    </div>
+
+    <div class="stats-strip" id="xgStats"></div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>Did chances turn into goals?</h3>
+        <p class="hint">Every dot is one match: xG created (across) vs goals actually scored (up). Dots above the
+           dashed line = clinical; below = wasteful.</p>
+        <div class="scatter-wrap" id="xgScatter"></div>
+        <div class="chart-legend" id="xgScatterLegend"></div>
+      </div>
+      <div class="card">
+        <h3>Attack vs defence</h3>
+        <p class="hint">xG created and xG conceded, per game, home vs away.</p>
+        <div id="homeAway"></div>
+        <div class="insight" id="xgInsight"></div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:18px">
+      <div class="card">
+        <h3>Most clinical finishers</h3>
+        <p class="hint">Players scoring the most goals above their xG.</p>
+        <div id="finClinical"></div>
+      </div>
+      <div class="card">
+        <h3>Wasteful in front of goal</h3>
+        <p class="hint">Players scoring the fewest goals relative to their xG.</p>
+        <div id="finWasteful"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLAYER LAB -->
+  <section id="view-playerlab" class="view">
+    <div class="section-head">
+      <h2>Player Lab</h2>
+      <p>Deep-dive a single player: season stat card, every shot they took this season, and a percentile
+         fingerprint versus the rest of the squad. Pick a second player to compare.</p>
+    </div>
+    <div class="controls">
+      <label style="color:var(--muted);font-size:13px">Player
+        <select id="plMain"></select>
+      </label>
+      <label style="color:var(--muted);font-size:13px">Compare
+        <select id="plCompare"><option value="">— none —</option></select>
+      </label>
+      <label style="color:var(--muted);font-size:13px">Shots
+        <select id="plShotFilter">
+          <option value="all">All shots</option>
+          <option value="goal">Goals only</option>
+          <option value="ot">On target</option>
+          <option value="big">Big chances</option>
+        </select>
+      </label>
+    </div>
+    <div class="stats-strip" id="plStats"></div>
+    <div class="card full-card" id="plCompareCard" style="display:none;margin-bottom:18px">
+      <h3 id="plCompareTitle">Head-to-head</h3>
+      <p class="hint">Side-by-side season totals &mdash; <b style="color:#3ddc97">green</b> = first player,
+         <b style="color:#4ea1ff">blue</b> = second.</p>
+      <div id="plCompareBody"></div>
+      <div class="grid-2" style="margin-top:18px">
+        <div><h4 id="plMapATitle" style="margin:0 0 6px;font-size:14px;color:#3ddc97"></h4><div id="plMapA"></div></div>
+        <div><h4 id="plMapBTitle" style="margin:0 0 6px;font-size:14px;color:#4ea1ff"></h4><div id="plMapB"></div></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card full-card">
+        <h3 id="plMapTitle">Shot map</h3>
+        <p class="hint">Attacking <b>→</b> (toward the right goal). Each dot is a shot sized by xG:
+           <span style="color:#ff3d8b;font-weight:700">goals pink</span>,
+           <span style="color:#4ea1ff;font-weight:700">on-target blue</span>, off-target grey.
+           Hover a dot for details.</p>
+        <div id="plMap"></div>
+      </div>
+      <div class="card full-card">
+        <h3>Style fingerprint</h3>
+        <p class="hint">Each spoke is a <b>percentile</b> versus the rest of the squad (further out = more of
+           that trait). Comparing overlays a second player.</p>
+        <div class="so-radar-wrap" id="plRadar"></div>
+        <div class="tl-legend" id="plRadarLegend"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SHOT MAPS / MATCH CENTRE -->
+  <section id="view-shots" class="view">
+    <div class="section-head">
+      <h2>Match Centre — shot maps &amp; passing</h2>
+      <p>Full interactive dashboards for every match: WhoScored &amp; Understat shot maps, passing networks,
+         pass maps, take-ons and the complete stat comparison. Tap a match to open it.</p>
+    </div>
+    <div class="controls">
+      <input id="sSearch" type="text" placeholder="Search opponent…" />
+      <select id="sComp">
+        <option value="all">All competitions</option>
+        <option value="La Liga">La Liga</option>
+        <option value="UCL">Champions League</option>
+        <option value="Copa">Copa del Rey</option>
+        <option value="Supercopa">Supercopa</option>
+      </select>
+    </div>
+    <div class="group-grid" id="shotGrid"></div>
+  </section>
+
+  <!-- DATA -->
+  <section id="view-data" class="view">
+    <div class="section-head">
+      <h2>Data</h2>
+      <p>The dashboard is built from cached WhoScored match feeds plus Understat xG. Everything here is
+         generated by the project pipeline, which re-scrapes and rebuilds roughly one hour after each match.</p>
+    </div>
+    <div class="data-grid" id="dataGrid"></div>
+    <div class="explainer" style="margin-top:22px">
+      <h3>How it updates</h3>
+      <p>A scheduled job runs about <b>one hour after every Barcelona kickoff</b>: it scrapes the finished
+         match, recomputes player &amp; xG aggregates, regenerates this dashboard and the per-match pages,
+         then publishes to GitHub Pages.</p>
+    </div>
+  </section>
+
+  <div class="footer-note" id="footerNote"></div>
+</main>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+  // Cache-bust generated data + app so a refresh after the pipeline rebuild
+  // always shows the latest results.
+  (function () {
+    var v = Date.now();
+    document.write('<scr' + 'ipt src="data.js?v=' + v + '"></scr' + 'ipt>');
+    document.write('<scr' + 'ipt src="app.js?v=' + v + '"></scr' + 'ipt>');
+  })();
+</script>
+</body>
+</html>
