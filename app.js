@@ -493,14 +493,14 @@
         var a = pt(e[0], e[1]), cx = a[0], cy = a[1];
         var b = pt(100, e[2]), gx = b[0], gyy = b[1];
         var xg = e[3], goal = e[4], ot = e[5];
-        var r = 0.6 + Math.sqrt(xg) * 2.4;
+        var r = 0.25 + Math.sqrt(xg) * 0.7;
         var col = goal ? GREEN : RED, solid = goal || ot;
         var outcome = goal ? "GOAL" : ot ? "On target" : "Off target / blocked";
         var info = e[6] + "' " + DOT + "xG " + xg.toFixed(2) + DOT + outcome + gmOf(e);
         s += '<line x1="' + cx.toFixed(1) + '" y1="' + cy.toFixed(1) + '" x2="' + gx.toFixed(1) + '" y2="' + gyy.toFixed(1) +
           '" stroke="' + col + '" stroke-width="' + (goal ? 0.3 : 0.2) + '" stroke-opacity="' + (goal ? 0.8 : 0.28) + '"/>';
         s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + r.toFixed(1) +
-          '" fill="' + (solid ? col : "none") + '" fill-opacity="0.85" stroke="' + col + '" stroke-width="' + (solid ? 0 : 0.5) + '"' + di(info) + '/>';
+          '" fill="' + (solid ? col : "none") + '" fill-opacity="0.6" stroke="' + col + '" stroke-width="' + (solid ? 0 : 0.32) + '"' + di(info) + '/>';
       });
     } else if (kind === "tackles") {
       events.forEach(function (e) { // [x,y,ok,min,gi]
