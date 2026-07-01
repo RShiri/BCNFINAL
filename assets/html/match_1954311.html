@@ -1,283 +1,57 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Guadalajara 0–2 Barcelona | BCN Analytics</title>
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guadalajara 0-2 Barcelona | FC Barcelona</title>
+<link rel="stylesheet" href="styles.css">
 <style>
-
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
-  background:radial-gradient(1200px 600px at 80% -10%,#16203a 0%,#0b0f1a 55%) fixed;
-  color:#e8edf7;line-height:1.5;-webkit-font-smoothing:antialiased}
-a{color:inherit;text-decoration:none}
-
-/* NAV / HEADER */
-.nav{display:flex;align-items:center;gap:18px;padding:14px 24px;flex-wrap:wrap;
-  background:rgba(11,15,26,.82);backdrop-filter:blur(10px);
-  border-bottom:1px solid #26304d;position:sticky;top:0;z-index:100}
-.nav-logo{font-size:20px;font-weight:800;color:#e8edf7;letter-spacing:.2px}
-.nav-logo span{color:#3ddc97}
-.nav-sub{font-size:12px;color:#93a0bd;margin-top:2px}
-.nav a{font-size:13px;color:#93a0bd;transition:color .2s}
-.nav a:hover,.nav a.active{color:#e8edf7}
-.nav-right{margin-left:auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-
-/* CARDS */
-.card{background:#161d31;border:1px solid #26304d;border-radius:14px;overflow:hidden;
-  box-shadow:0 8px 28px rgba(0,0,0,.35);transition:border-color .15s,transform .1s,box-shadow .15s}
-.card:hover{border-color:#3ddc97}
-.card-header{padding:14px 20px;border-bottom:1px solid #26304d;display:flex;align-items:center;gap:10px;background:#1b2440}
-.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.card-header h3{font-size:13px;font-weight:700;letter-spacing:.4px;color:#e8edf7}
-.card img{width:100%;display:block}
-
-/* RESULT BADGES */
-.badge-W{background:rgba(61,220,151,.14);color:#3ddc97;border:1px solid rgba(61,220,151,.4)}
-.badge-D{background:rgba(255,180,84,.14);color:#ffb454;border:1px solid rgba(255,180,84,.4)}
-.badge-L{background:rgba(255,107,129,.14);color:#ff6b81;border:1px solid rgba(255,107,129,.4)}
-.badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:1px}
-
-/* COMP PILL */
-.pill{display:inline-block;padding:2px 9px;border-radius:8px;font-size:10px;font-weight:700;letter-spacing:.5px}
-.pill-liga{background:rgba(78,161,255,.14);color:#4ea1ff}
-.pill-ucl{background:rgba(61,220,151,.14);color:#3ddc97}
-.pill-copa{background:rgba(197,122,255,.16);color:#c57aff}
-.pill-supercopa{background:rgba(255,180,84,.14);color:#ffb454}
-
-/* TWO COL */
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-@media(max-width:900px){.two-col{grid-template-columns:1fr}}
-.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
-@media(max-width:1100px){.three-col{grid-template-columns:1fr 1fr}}
-@media(max-width:600px){.three-col{grid-template-columns:1fr}}
-
-/* SECTION */
-.section{padding:34px 28px;border-top:1px solid #26304d}
-.sec-title{font-size:20px;font-weight:800;color:#e8edf7;margin-bottom:6px}
-.sec-sub{font-size:13px;color:#93a0bd;margin-bottom:22px;max-width:760px}
-
-/* STAT COMPARISON BAR ROW */
-.stats-header{display:flex;justify-content:space-between;padding:0 0 14px;border-bottom:1px solid #26304d;margin-bottom:14px}
-.stats-team-name{font-size:13px;font-weight:800;letter-spacing:.5px}
-.sr{display:grid;grid-template-columns:70px 1fr 70px;align-items:center;gap:10px;margin-bottom:11px}
-.sv{font-size:15px;font-weight:800;text-align:center;line-height:1;font-variant-numeric:tabular-nums}
-.sv.h{color:#3ddc97} .sv.a{color:#4ea1ff;text-align:center}
-.sb-wrap{text-align:center}
-.sb{display:flex;height:7px;border-radius:4px;overflow:hidden;background:#121829;margin-bottom:5px}
-.bh{background:#3ddc97;transition:width .6s} .ba{background:#4ea1ff;transition:width .6s}
-.sl{font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:#93a0bd}
-
-/* TABS / SEGMENTED CONTROLS */
-.tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
-.tab{padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;
-  background:transparent;border:1px solid transparent;color:#93a0bd;transition:all .15s ease}
-.tab:hover{color:#e8edf7;background:#161d31}
-.tab.active{background:#3ddc97;border-color:#3ddc97;color:#0b0f1a;box-shadow:0 4px 14px rgba(61,220,151,.3)}
-
-/* FOOTER */
-.footer{text-align:center;padding:26px 20px;font-size:12px;color:#93a0bd;border-top:1px solid #26304d}
-
-/* Force embedded Plotly charts to fill width.
-   The pitch itself stays proportional via the figure's yaxis scaleanchor,
-   so width:100% here only changes the surrounding letterbox, not the
-   pitch shape. */
-.js-plotly-plot,.plot-container,.plotly{width:100%!important}
-.js-plotly-plot .main-svg{width:100%!important}
-
-
-.hdr{background:radial-gradient(900px 400px at 50% -40%,#16203a 0%,#0b0f1a 70%);
-  border-bottom:1px solid #26304d;padding:30px 32px 24px;text-align:center}
-.match-label{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#93a0bd;margin-bottom:12px}
-.scoreline{display:flex;align-items:center;justify-content:center;gap:24px;margin:10px 0}
-.tn{font-size:22px;font-weight:900;min-width:180px}
-.tn.h{color:#93a0bd;text-align:right}
-.tn.a{color:#3ddc97;text-align:left}
-.sc{font-size:48px;font-weight:900;color:#e8edf7;letter-spacing:-2px;font-variant-numeric:tabular-nums;
-  text-shadow:0 0 40px #4caf5055}
-.meta{font-size:12px;color:#93a0bd;margin-top:8px}
-
-.stats-box{max-width:760px;margin:0 auto;padding:28px 28px}
-
-.page-inner{max-width:1180px;margin:0 auto}
-
-.match-nav{display:flex;justify-content:space-between;align-items:center;padding:12px 24px;
-  border-bottom:1px solid #26304d;font-size:13px}
-.match-nav a{color:#93a0bd;transition:color .15s} .match-nav a:hover{color:#3ddc97}
-</style>
-</head>
-<body>
-
-<nav class="nav">
-  <div class="nav-logo">FC <span>Barcelona</span> · Analytics</div>
-  <div class="nav-right"><a href="index.html">← Back to Season</a></div>
-</nav>
-
-<div class="match-nav">
-  <a href="match_1914034.html">← Prev</a>
-  <span style="font-size:12px;color:#93a0bd">2025-12-16 · Copa del Rey</span>
-  <a href="match_1914049.html">Next →</a>
+.mhdr{max-width:1180px;margin:0 auto;padding:26px 20px 6px}
+.mscore{display:flex;align-items:center;justify-content:center;gap:26px;margin:6px 0}
+.mteam{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:150px}
+.mteam .nm{font-size:17px;font-weight:800;text-align:center}
+.mbig{font-size:46px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.mmeta{text-align:center;color:var(--muted);font-size:12.5px;margin-top:6px}
+.mnav{max-width:1180px;margin:0 auto;padding:10px 20px;display:flex;justify-content:space-between;font-size:13px}
+.mnav a{color:var(--muted)} .mnav a:hover{color:var(--accent)}
+.legend-dot{display:inline-flex;align-items:center;gap:6px;margin-right:14px;font-size:12px;color:var(--muted)}
+.legend-dot i{width:11px;height:11px;border-radius:50%}
+</style></head><body>
+<header class="site"><div class="header-inner"><div class="brand">
+  <div class="title">FC <span>Barcelona</span> &middot; Match Centre</div>
+  <div class="sub">Copa del Rey · 2025-12-16</div></div>
+  <nav class="tabs"><a href="index.html"><button>&larr; Back to Dashboard</button></a></nav>
+</div></header>
+<div class="mnav"><a href="match_1914034.html">&larr; Prev</a><span></span><a href="match_1914049.html">Next &rarr;</a></div>
+<main>
+<div class="mhdr">
+  <div class="mscore">
+    <div class="mteam"><div style="width:44px;height:44px;border-radius:50%;background:#93a0bd;opacity:.4"></div><span class="nm" style="color:#93a0bd">Guadalajara</span></div>
+    <div style="text-align:center"><div class="mbig">0 &ndash; 2</div>
+      <span class="badge badge-W" style="font-size:12px">W</span></div>
+    <div class="mteam"><img src="logos/barcelona.png" alt="" style="width:44px;height:44px;object-fit:contain"><span class="nm" style="color:#3ddc97">Barcelona</span></div>
+  </div>
+  <div class="mmeta">Copa del Rey &middot; 2025-12-16 &middot; Unknown &middot; Ref: Unknown</div>
 </div>
 
-<div class="hdr">
-  <div class="match-label">Copa del Rey · 2025-12-16</div>
-  <div class="scoreline">
-    <div class="tn h">Guadalajara</div>
-    <div class="sc">0 – 2</div>
-    <div class="tn a">Barcelona</div>
-  </div>
-  <span class="badge badge-W" style="font-size:13px;padding:4px 14px">W</span>
-  <div class="meta" style="margin-top:10px">Unknown  ·  Ref: Unknown</div>
-</div>
+<div class="section-head" style="max-width:760px;margin:22px auto 10px"><h2 style="text-align:center;font-size:16px">Match stats</h2></div>
+<div class="card" style="max-width:760px;margin:0 auto"><div class="stat-cmp"><div class="sc-val win">0.00</div><div><div class="sc-label">xG (est.)</div><div class="sc-bar"><div class="sc-fill h" style="width:0%"></div><div class="sc-fill a" style="width:100%"></div></div></div><div class="sc-val">0.00</div></div><div class="stat-cmp"><div class="sc-val">0%</div><div><div class="sc-label">Possession</div><div class="sc-bar"><div class="sc-fill h" style="width:0%"></div><div class="sc-fill a" style="width:100%"></div></div></div><div class="sc-val win">100%</div></div><div class="stat-cmp"><div class="sc-val win">0</div><div><div class="sc-label">Shots on Target</div><div class="sc-bar"><div class="sc-fill h" style="width:0%"></div><div class="sc-fill a" style="width:100%"></div></div></div><div class="sc-val">0</div></div><div class="stat-cmp"><div class="sc-val win">0</div><div><div class="sc-label">Shots</div><div class="sc-bar"><div class="sc-fill h" style="width:0%"></div><div class="sc-fill a" style="width:100%"></div></div></div><div class="sc-val">0</div></div><div class="stat-cmp"><div class="sc-val win">0</div><div><div class="sc-label">Big Chances</div><div class="sc-bar"><div class="sc-fill h" style="width:0%"></div><div class="sc-fill a" style="width:100%"></div></div></div><div class="sc-val">0</div></div><div class="stat-cmp"><div class="sc-val win">0%</div><div><div class="sc-label">Pass Accuracy</div><div class="sc-bar"><div class="sc-fill h" style="width:0%"></div><div class="sc-fill a" style="width:100%"></div></div></div><div class="sc-val">0%</div></div><div class="stat-cmp"><div class="sc-val win">0</div><div><div class="sc-label">Duels Won</div><div class="sc-bar"><div class="sc-fill h" style="width:0%"></div><div class="sc-fill a" style="width:100%"></div></div></div><div class="sc-val">0</div></div><div class="stat-cmp"><div class="sc-val win">0</div><div><div class="sc-label">Saves</div><div class="sc-bar"><div class="sc-fill h" style="width:0%"></div><div class="sc-fill a" style="width:100%"></div></div></div><div class="sc-val">0</div></div><div class="stat-cmp"><div class="sc-val win">0</div><div><div class="sc-label">Fouls</div><div class="sc-bar"><div class="sc-fill h" style="width:0%"></div><div class="sc-fill a" style="width:100%"></div></div></div><div class="sc-val">0</div></div></div>
 
-<!-- STATS -->
-<div class="stats-box">
-  <div style="text-align:center;margin-bottom:16px">
-    <span style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#93a0bd">Match Statistics</span>
-  </div>
-  <div class="stats-header">
-    <span class="stats-team-name" style="color:#93a0bd">Guadalajara</span>
-    <span class="stats-team-name" style="color:#3ddc97">Barcelona</span>
-  </div>
-  <div class="sr">
-        <span class="sv h">0.00</span>
-        <div class="sb-wrap">
-          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
-          <span class="sl">xG (model est.)</span>
-        </div>
-        <span class="sv a">0.00</span>
-      </div><div class="sr">
-        <span class="sv h">0%</span>
-        <div class="sb-wrap">
-          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
-          <span class="sl">Possession</span>
-        </div>
-        <span class="sv a">100%</span>
-      </div><div class="sr">
-        <span class="sv h">0</span>
-        <div class="sb-wrap">
-          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
-          <span class="sl">Shots on Goal</span>
-        </div>
-        <span class="sv a">0</span>
-      </div><div class="sr">
-        <span class="sv h">0</span>
-        <div class="sb-wrap">
-          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
-          <span class="sl">Shots</span>
-        </div>
-        <span class="sv a">0</span>
-      </div><div class="sr">
-        <span class="sv h">0</span>
-        <div class="sb-wrap">
-          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
-          <span class="sl">Big Chances Created</span>
-        </div>
-        <span class="sv a">0</span>
-      </div><div class="sr">
-        <span class="sv h">0</span>
-        <div class="sb-wrap">
-          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
-          <span class="sl">Big Chances Missed</span>
-        </div>
-        <span class="sv a">0</span>
-      </div><div class="sr">
-        <span class="sv h">0%</span>
-        <div class="sb-wrap">
-          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
-          <span class="sl">Passes (Accuracy)</span>
-        </div>
-        <span class="sv a">0%</span>
-      </div><div class="sr">
-        <span class="sv h">0</span>
-        <div class="sb-wrap">
-          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
-          <span class="sl">Duels Won</span>
-        </div>
-        <span class="sv a">0</span>
-      </div><div class="sr">
-        <span class="sv h">0</span>
-        <div class="sb-wrap">
-          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
-          <span class="sl">Saves</span>
-        </div>
-        <span class="sv a">0</span>
-      </div><div class="sr">
-        <span class="sv h">0</span>
-        <div class="sb-wrap">
-          <div class="sb"><div class="bh" style="width:0%"></div><div class="ba" style="width:100%"></div></div>
-          <span class="sl">Fouls Committed</span>
-        </div>
-        <span class="sv a">0</span>
-      </div>
-</div>
-
-<div class="page-inner">
-
-<!-- SHOT MAPS -->
-<div class="section">
-  <div class="sec-title">🎯 Shot Maps</div>
-  <div class="sec-sub">Dot size = xG · ★ = Goal · Hover for player, minute, xG, zone · Guadalajara attacks → &nbsp;|&nbsp; Barcelona attacks ←</div>
-
-  <div style="margin-bottom:10px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#93a0bd">
-    WhoScored xG Model
-  </div>
-  <div style="border-radius:12px;overflow:hidden;border:1px solid #26304d;background:#121829;margin-bottom:28px;width:100%">
-    <p style='color:#666;text-align:center;padding:40px'>Shot map not yet generated.</p>
-  </div>
-
-  <div style="margin-bottom:10px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#93a0bd">
-    Understat xG Model
-  </div>
-  <div style="border-radius:12px;overflow:hidden;border:1px solid #26304d;background:#121829;width:100%">
-    <p style='color:#666;text-align:center;padding:40px'>Shot map not yet generated.</p>
+<div class="section-head" style="margin-top:30px"><h2>Shot map</h2>
+  <p>Every shot this match, sized by xG. Guadalajara attacks &rarr;, Barcelona &larr;.
+  <span style="color:#ff3d8b;font-weight:700">Goals pink</span>,
+  <span style="color:#4ea1ff;font-weight:700">on-target blue</span>, off-target grey. Hover a dot for details.</p></div>
+<div class="card"><svg viewBox="0 0 900 560" width="100%" style="display:block"><rect x="12.0" y="12.0" width="876.0" height="536.0" rx="6" fill="#101a2e" stroke="#26304d"/><line x1="450.0" y1="12.0" x2="450.0" y2="548.0" stroke="#26304d"/><circle cx="450.0" cy="280.0" r="66.8" fill="none" stroke="#26304d"/><rect x="756.6" y="132.6" width="131.4" height="294.8" fill="none" stroke="#26304d"/><rect x="12.0" y="132.6" width="131.4" height="294.8" fill="none" stroke="#26304d"/><rect x="844.2" y="213.0" width="43.8" height="134.0" fill="none" stroke="#26304d"/><rect x="12.0" y="213.0" width="43.8" height="134.0" fill="none" stroke="#26304d"/></svg>
+  <div style="margin-top:12px">
+    <span class="legend-dot"><i style="background:#ff3d8b"></i>Goal</span>
+    <span class="legend-dot"><i style="background:#4ea1ff"></i>On target</span>
+    <span class="legend-dot"><i style="background:#7e8bb0"></i>Off target</span>
+    <span class="legend-dot">Total: Guadalajara 0.00 xG (0 shots)  ·  Barcelona 0.00 xG (0 shots)</span>
   </div>
 </div>
 
-<!-- PASS NETWORKS -->
-<div class="section">
-  <div class="sec-title">🔗 Passing Networks</div>
-  <div class="sec-sub">Starting XI · Line thickness = pass volume · Pre-first substitution</div>
-  <div class="two-col">
-    <div class="card" style="padding:32px;text-align:center;color:#93a0bd">Guadalajara Pass Network<br><small>No data</small></div>
-    <div class="card" style="padding:32px;text-align:center;color:#93a0bd">Barcelona Pass Network<br><small>No data</small></div>
-  </div>
+<div class="section-head" style="margin-top:30px"><h2>Player ratings</h2>
+  <p>Average match rating and minutes for every player who featured.</p></div>
+<div class="grid-2">
+  <div class="card"><h3 style="color:#93a0bd">Guadalajara</h3><p class="hint">No player data.</p></div>
+  <div class="card"><h3 style="color:#3ddc97">Barcelona</h3><p class="hint">No player data.</p></div>
 </div>
-
-<!-- PASS MAPS -->
-<div class="section">
-  <div class="sec-title">📊 Pass Maps</div>
-  <div class="sec-sub">Green = complete · Red = incomplete</div>
-  <div class="tabs"><button class="tab active" onclick="showPassTab(0,this)">All Passes</button><button class="tab" onclick="showPassTab(1,this)">Final Half Passes</button><button class="tab" onclick="showPassTab(2,this)">Final Third Entries</button><button class="tab" onclick="showPassTab(3,this)">Passes Into the Box</button><button class="tab" onclick="showPassTab(4,this)">Progressive Passes</button></div><div class="pass-tab-content" id="pt0" style="display:block"><div class="two-col"><div class="card" style="padding:32px;text-align:center;color:#93a0bd">Guadalajara — All Passes<br><small>No data</small></div><div class="card" style="padding:32px;text-align:center;color:#93a0bd">Barcelona — All Passes<br><small>No data</small></div></div></div><div class="pass-tab-content" id="pt1" style="display:none"><div class="two-col"><div class="card" style="padding:32px;text-align:center;color:#93a0bd">Guadalajara — Final Half Passes<br><small>No data</small></div><div class="card" style="padding:32px;text-align:center;color:#93a0bd">Barcelona — Final Half Passes<br><small>No data</small></div></div></div><div class="pass-tab-content" id="pt2" style="display:none"><div class="two-col"><div class="card" style="padding:32px;text-align:center;color:#93a0bd">Guadalajara — Final Third Entries<br><small>No data</small></div><div class="card" style="padding:32px;text-align:center;color:#93a0bd">Barcelona — Final Third Entries<br><small>No data</small></div></div></div><div class="pass-tab-content" id="pt3" style="display:none"><div class="two-col"><div class="card" style="padding:32px;text-align:center;color:#93a0bd">Guadalajara — Passes Into the Box<br><small>No data</small></div><div class="card" style="padding:32px;text-align:center;color:#93a0bd">Barcelona — Passes Into the Box<br><small>No data</small></div></div></div><div class="pass-tab-content" id="pt4" style="display:none"><div class="two-col"><div class="card" style="padding:32px;text-align:center;color:#93a0bd">Guadalajara — Progressive Passes<br><small>No data</small></div><div class="card" style="padding:32px;text-align:center;color:#93a0bd">Barcelona — Progressive Passes<br><small>No data</small></div></div></div>
-</div>
-
-<!-- DRIBBLES -->
-<div class="section">
-  <div class="sec-title">⚡ Take-Ons</div>
-  <div class="sec-sub">Filter by player · Green = successful · Red = unsuccessful</div>
-  <div class="two-col">
-    <div class="card">
-      <div class="card-header"><div class="dot" style="background:#93a0bd"></div><h3>Guadalajara Take-Ons</h3></div>
-      <div style="background:#121829"><p style='color:#666;text-align:center;padding:40px'>No take-on data.</p></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><div class="dot" style="background:#3ddc97"></div><h3>Barcelona Take-Ons</h3></div>
-      <div style="background:#121829"><p style='color:#666;text-align:center;padding:40px'>No take-on data.</p></div>
-    </div>
-  </div>
-</div>
-
-</div><!-- /page-inner -->
-
-<div class="footer">BCNProject Analytics · Match 1954311 · WhoScored + Understat</div>
-
-<script>
-function showPassTab(idx, btn) {
-  document.querySelectorAll('.pass-tab-content').forEach((el,i) => el.style.display = i===idx ? 'block' : 'none');
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-}
-</script>
-</body>
-</html>
+<div class="footer-note">FC Barcelona 2025/26 &middot; Match 1954311 &middot; WhoScored + Understat</div>
+</main></body></html>
