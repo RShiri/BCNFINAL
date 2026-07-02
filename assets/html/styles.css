@@ -130,8 +130,12 @@ main { max-width: 1180px; margin: 0 auto; padding: 26px 20px 80px; }
 .stat .k { color: var(--muted); font-size: 12px; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.6px; }
 .stat .v.accent { color: var(--accent); }
 .stat .v.blue { color: var(--accent-2); }
+/* when comparing two players, both values sit SIDE BY SIDE (main | compare) above
+   the label, rather than stacked one above the other */
+.stat .cmp-vals { display: flex; gap: 10px; justify-content: center; align-items: baseline; }
+.stat .cmp-vals .v { font-size: 24px; }
 /* second value shown inside a stat card when comparing two players */
-.stat .v2 { font-size: 19px; font-weight: 800; color: var(--accent-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.stat .v2 { font-size: 24px; font-weight: 800; color: var(--accent-2); font-variant-numeric: tabular-nums; }
 
 /* group grid */
 .group-grid {
@@ -554,7 +558,8 @@ code { background: var(--bg-2); border: 1px solid var(--line); border-radius: 4p
   .stats-strip { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .stat { padding: 12px 13px; }
   .stat .v { font-size: 22px; }
-  .stat .v2 { font-size: 15px; }
+  .stat .cmp-vals { gap: 7px; }
+  .stat .cmp-vals .v, .stat .v2 { font-size: 17px; }
 
   /* group tables: shrink so all 9 columns fit a phone */
   .group-grid { grid-template-columns: 1fr; }

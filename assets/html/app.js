@@ -677,8 +677,10 @@
   function statCard2(mv, cv, k, cls) {
     if (cv == null)
       return '<div class="stat"><div class="v ' + (cls || "") + '">' + mv + '</div><div class="k">' + k + "</div></div>";
-    return '<div class="stat"><div class="v accent">' + mv + '</div>' +
-      '<div class="v2">' + cv + '</div><div class="k">' + k + "</div></div>";
+    // comparing: the two players' values sit SIDE BY SIDE (main gold, compare blue),
+    // matching the radar colours, rather than stacked one above the other.
+    return '<div class="stat"><div class="cmp-vals"><div class="v accent">' + mv +
+      '</div><div class="v2">' + cv + '</div></div><div class="k">' + k + "</div></div>";
   }
   // success / conversion breakdown for an action-map metric (arr = the drawn events)
   function mapSummary(arr, kind, ev) {
@@ -720,6 +722,8 @@
     s += statCard2(p.assists,  pc ? pc.assists : null,  "Assists", "blue");
     s += statCard2(n2(p.xg),   pc ? n2(pc.xg) : null,   "xG", "warn");
     s += statCard2(sgn(p.xgd), pc ? sgn(pc.xgd) : null, "xG&plusmn;", p.xgd >= 0 ? "accent" : "bad");
+    s += statCard2(n2(p.xa || 0),  pc ? n2(pc.xa || 0)  : null, "xA", "blue");
+    s += statCard2(n2(p.xgi || 0), pc ? n2(pc.xgi || 0) : null, "xGI", "accent");
     s += statCard2(p.shots,    pc ? pc.shots : null,    "Shots");
     s += statCard2(p.keyp,     pc ? pc.keyp : null,     "Key Passes");
     s += statCard2(rtg(p),     pc ? rtg(pc) : null,     "Avg Rating", "accent");

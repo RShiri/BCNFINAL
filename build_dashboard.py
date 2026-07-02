@@ -177,7 +177,7 @@ def aggregate_players(matches):
                 "goals": 0, "assists": 0, "shots": 0, "sot": 0, "keyp": 0,
                 "passes": 0, "pacc_num": 0, "drib": 0, "tackles": 0, "intc": 0, "prog": 0,
                 "aerials": 0, "touches": 0, "fouls": 0, "yellow": 0, "red": 0,
-                "rating_sum": 0.0, "rating_n": 0, "xg": 0.0,
+                "rating_sum": 0.0, "rating_n": 0, "xg": 0.0, "xa": 0.0,
             }
         return e
 
@@ -196,8 +196,8 @@ def aggregate_players(matches):
         team_name = team.get("name", "Barcelona")
         pid2name = {p.get("playerId"): p.get("name") for p in team.get("players", [])}
 
-        # --- per-shot xG (geometry model) attributed by player name ---
-        xg_by_name = {}
+        # --- per-shot xG (unified model) + xA (creator) attributed by name ---
+        xg_by_name, xa_by_name = {}, {}
         try:
             sdf = bw._build_shot_df(d, team_name) if bw._build_shot_df else None
         except Exception:
@@ -208,6 +208,11 @@ def aggregate_players(matches):
                 if not nm:
                     continue
                 xg_by_name[nm] = xg_by_name.get(nm, 0.0) + float(r.get("xG", 0) or 0)
+                rel = r.get("related_pid")   # xA: credit the shot's creator (assister)
+                if rel is not None and r.get("situation") != "Penalty":
+                    cnm = pid2name.get(rel)
+                    if cnm:
+                        xa_by_name[cnm] = xa_by_name.get(cnm, 0.0) + float(r.get("xG", 0) or 0)
                 pshots.setdefault(nm, []).append({
                     "x": round(float(r.get("x", 0) or 0), 2),
                     "y": round(float(r.get("y", 0) or 0), 2),
@@ -289,6 +294,7 @@ def aggregate_players(matches):
             e["yellow"]  += yel_by.get(nm, 0)
             e["red"]     += red_by.get(nm, 0)
             e["xg"]      += xg_by_name.get(nm, 0.0)
+            e["xa"]      += xa_by_name.get(nm, 0.0)
 
     # finalise derived fields
     out = []
@@ -305,6 +311,8 @@ def aggregate_players(matches):
             "touches": e["touches"], "fouls": e["fouls"], "yellow": e["yellow"],
             "red": e["red"], "rating": rating,
             "xg": round(e["xg"], 2), "xgd": round(e["goals"] - e["xg"], 2),
+            "xa": round(e["xa"], 2), "xad": round(e["assists"] - e["xa"], 2),
+            "xgi": round(e["xg"] + e["xa"], 2),
         })
     out.sort(key=lambda p: (-p["ga"], -p["goals"], -p["rating"]))
     # round shot xg lists already done
