@@ -28,19 +28,18 @@ def _ws_to_sb_x(ws_x):
     elif ws_x <= 89: return 60.0 + (ws_x - 50) * (48.0 / 39.0)
     else: return 108.0 + (ws_x - 89) * (12.0 / 11.0)
 
+import sys as _sys
+_sys.path.insert(0, _PROJECT_ROOT)
+from xg_core.score import XGScorer
+
+_XG_SCORER = XGScorer()
+
+
 def _estimate_xg(x_sb, y_sb, is_penalty, is_big_chance, body_part):
-    if is_penalty: return 0.76
-    dx = 120.0 - x_sb
-    dy = 40.0 - y_sb
-    distance = max(np.sqrt(dx**2 + dy**2), 0.5)
-    angle = np.arctan2(4.0, distance)
-    xg = (angle / (np.pi / 2)) * (1 / (1 + distance / 30))
-    if body_part == "Header": xg *= 0.4
-    if is_big_chance:
-        xg = max(0.35, xg * 3.5)
-        xg = min(0.65, xg)
-    if distance > 18: xg *= (18 / distance)**2
-    return round(min(max(xg, 0.01), 0.95), 3)
+    # routed through the shared xg_core v2 artifact (replaces the old
+    # geometric heuristic, which ran ~2x hot on long shots)
+    return _XG_SCORER.estimate_xg(x_sb, y_sb, is_penalty, is_big_chance,
+                                  body_part, "Open Play", league="LaLiga")
 
 def _player_name(match_data, player_id):
     for side in ("home", "away"):

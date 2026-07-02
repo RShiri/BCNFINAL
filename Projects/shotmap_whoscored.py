@@ -113,48 +113,25 @@ def _shot_is_on_target(ev):
     return type_name in ("SavedShot", "Goal")
 
 
-# Unified, data-driven xG model — one logistic regression fit on ALL La Liga +
-# World Cup shots (11,830 non-penalty shots, 1,166 goals). Brier 0.071. The SAME
-# model (identical coefficients) runs in XLALIGA and the World Cup dashboard so all
-# three report consistent xG. Features: distance & the angle the goal-mouth
-# subtends, header, WhoScored big-chance flag, and shot situation. Barcelona plays
-# La Liga, so it uses the La Liga finishing shift. Penalties fixed at _PENALTY_XG.
-_INTERCEPT = -3.379503
-_COEF = {
-    "dist": -0.004175, "angle": 1.421131, "header": -0.580616, "big": 1.891534,
-    "freekick": 0.278088, "corner": -0.303916, "setpiece": -0.345961, "fastbreak": 0.455797,
-}
-_CAL_SHIFT = -0.044712   # La Liga finishing shift (World Cup uses +0.162084)
-_PENALTY_XG = 0.76
+# xG via the shared xg_core v2 artifact — the SAME calibrated model (identical
+# artifact file) runs in XLALIGA and the World Cup dashboard so all three report
+# consistent xG. Barcelona plays La Liga, so it uses the La Liga level shift.
+# Canonical xg_core lives in XLALIGA; this repo carries a vendored copy.
+import sys as _sys
+_sys.path.insert(0, _PROJECT_ROOT)
+from xg_core.score import XGScorer
+
+_XG_SCORER = XGScorer()
+_XG_LEAGUE = "LaLiga"
 
 
-def _shot_angle(x_sb, y_sb):
-    """Angle (radians) the goal mouth subtends from the shot location; posts at
-    (120, 36) and (120, 44) in StatsBomb coords. Bigger angle = better chance."""
-    a = math.hypot(120.0 - x_sb, 36.0 - y_sb)
-    b = math.hypot(120.0 - x_sb, 44.0 - y_sb)
-    if a <= 0.0 or b <= 0.0:
-        return math.pi
-    c = max(-1.0, min(1.0, (a * a + b * b - 64.0) / (2.0 * a * b)))
-    return math.acos(c)
-
-
-def _estimate_xg(x_sb, y_sb, is_penalty, is_big_chance, body_part, situation="Open Play"):
-    """Calibrated xG via the unified logistic model (see _INTERCEPT/_COEF).
-    Penalties are fixed at _PENALTY_XG. Coords in StatsBomb metres."""
-    if is_penalty:
-        return _PENALTY_XG
-    dist = max(math.hypot(120.0 - x_sb, 40.0 - y_sb), 0.5)
-    z = _INTERCEPT + _CAL_SHIFT
-    z += _COEF["dist"] * dist + _COEF["angle"] * _shot_angle(x_sb, y_sb)
-    if body_part == "Header":
-        z += _COEF["header"]
-    if is_big_chance:
-        z += _COEF["big"]
-    z += {"Free Kick": _COEF["freekick"], "Corner": _COEF["corner"],
-          "Set Piece": _COEF["setpiece"], "Fast Break": _COEF["fastbreak"]}.get(situation, 0.0)
-    xg = 1.0 / (1.0 + math.exp(-z))
-    return round(min(max(xg, 0.01), 0.95), 3)
+def _estimate_xg(x_sb, y_sb, is_penalty, is_big_chance, body_part,
+                 situation="Open Play", assisted=False):
+    """Calibrated xG via the shared xg_core v2 artifact. Penalties are the
+    artifact's empirical constant. Coords in StatsBomb metres."""
+    return _XG_SCORER.estimate_xg(x_sb, y_sb, is_penalty, is_big_chance,
+                                  body_part, situation, assisted=assisted,
+                                  league=_XG_LEAGUE)
 
 
 def _extract_qualifiers(ev):
@@ -244,7 +221,8 @@ def build_shot_df(match_data, team_name):
             "full_name":    _player_full_name(match_data, ev.get("playerId")),
             "is_goal":      _shot_is_goal(ev),
             "is_on_target": _shot_is_on_target(ev),
-            "xG":           _estimate_xg(x_sb, y_sb, is_penalty, big_chance, body, situation),
+            "xG":           _estimate_xg(x_sb, y_sb, is_penalty, big_chance, body, situation,
+                                         assisted=ev.get("relatedPlayerId") is not None),
             "related_pid":  ev.get("relatedPlayerId"),   # WhoScored assister → xA credit
             "body_part":    body,
             "situation":    situation,

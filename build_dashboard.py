@@ -26,6 +26,9 @@ LOGO_DST = os.path.join(HTML_DIR, "logos")
 
 sys.path.insert(0, ROOT)
 import build_website as bw   # reuse load_matches + shot model + colours
+from xg_core.xa_score import XAScorer   # pass-level expected assists
+
+_XA = XAScorer()
 
 # design tokens (mirror styles.css)
 ACC, BLUE, WARN, BAD, MUTED, TEXT = "#3ddc97", "#4ea1ff", "#ffb454", "#ff6b81", "#93a0bd", "#e8edf7"
@@ -196,8 +199,14 @@ def aggregate_players(matches):
         team_name = team.get("name", "Barcelona")
         pid2name = {p.get("playerId"): p.get("name") for p in team.get("players", [])}
 
-        # --- per-shot xG (unified model) + xA (creator) attributed by name ---
+        # --- per-shot xG (xg_core v2) + pass-level xA (xg_core xA model) ---
+        # xA(pass) = calibrated P(the pass becomes an assist), summed over every
+        # successful pass — a killer ball the striker wastes still earns credit.
         xg_by_name, xa_by_name = {}, {}
+        for pid, v in _XA.player_xa_from_events(d, league="LaLiga").items():
+            cnm = pid2name.get(pid)
+            if cnm:  # pid2name covers the BCN side only — opponents drop out here
+                xa_by_name[cnm] = xa_by_name.get(cnm, 0.0) + v
         try:
             sdf = bw._build_shot_df(d, team_name) if bw._build_shot_df else None
         except Exception:
@@ -208,11 +217,6 @@ def aggregate_players(matches):
                 if not nm:
                     continue
                 xg_by_name[nm] = xg_by_name.get(nm, 0.0) + float(r.get("xG", 0) or 0)
-                rel = r.get("related_pid")   # xA: credit the shot's creator (assister)
-                if rel is not None and r.get("situation") != "Penalty":
-                    cnm = pid2name.get(rel)
-                    if cnm:
-                        xa_by_name[cnm] = xa_by_name.get(cnm, 0.0) + float(r.get("xG", 0) or 0)
                 pshots.setdefault(nm, []).append({
                     "x": round(float(r.get("x", 0) or 0), 2),
                     "y": round(float(r.get("y", 0) or 0), 2),
