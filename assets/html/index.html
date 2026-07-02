@@ -135,6 +135,14 @@
          Add up the shots and you get how many goals an <i>average</i> finisher would have scored.</p>
       <p>So if Barcelona racks up <b>2.5 xG but scores 1</b>, they created good chances and wasted them.
          Score <b>3 from 1.0 xG</b> and they finished brilliantly — or got lucky.</p>
+      <p><b>Where does the xG come from? We built the model ourselves.</b> Every shot is scored by a
+         logistic-regression model trained on <b>11,830 real shots</b> — the whole 2025/26 La Liga season plus
+         the 2026 World Cup — against what actually happened to them. It weighs the shot's <b>distance</b>, the
+         <b>angle the goal mouth opens up</b>, whether it was a <b>header</b>, a <b>big chance</b>, and the
+         <b>situation</b> (open play, free kick, corner, set piece, fast break), with a La Liga finishing
+         calibration (penalties fixed at 0.76). At match level it tracks Understat's professional model at
+         <b>r&nbsp;=&nbsp;0.975</b> on Barcelona's games. The same model runs across our La Liga, World Cup and
+         Barcelona dashboards, so the numbers compare cleanly.</p>
     </div>
 
     <div class="stats-strip" id="xgStats"></div>
@@ -166,6 +174,15 @@
         <p class="hint">Players scoring the fewest goals relative to their xG.</p>
         <div id="finWasteful"></div>
       </div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <h3>The same story as a distribution — games by chance quality</h3>
+      <p class="hint">Every team-match (Barcelona's side and their opponents' side) sorted into a bucket by how
+         much xG it produced. The bar is <b>how many games</b> created that much chance quality; under each bar,
+         <b>avg xG → avg goals</b> actually scored from those games. <b style="color:#43e8a0">Green = those
+         chances over-delivered</b>, <b style="color:#ff5e7a">red = under-delivered</b>, blue ≈ spot on.</p>
+      <div id="xgDist"></div>
     </div>
   </section>
 

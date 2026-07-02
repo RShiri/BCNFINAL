@@ -104,7 +104,7 @@
     var ss = $("#seasonSel"); if (ss && ss.value !== sel) ss.value = sel;
     document.title = "FC Barcelona " + seasonLabel(sel) + " — Dashboard & xG Lab";
 
-    renderOverview(); renderMatches(); renderPlayers(); renderXg();
+    renderOverview(); renderMatches(); renderPlayers(); renderXg(); renderXgDist();
     buildPlayerLabOptions(); renderPlayerLab(); renderShotGrid(); renderData();
 
     var fn = $("#footerNote");
@@ -462,6 +462,59 @@
     var shooters = P.filter(function (p) { return p.xg >= 0.5 || p.goals >= 1; });
     finList($("#finClinical"), shooters.slice().sort(function (a, b) { return b.xgd - a.xgd; }).slice(0, 8));
     finList($("#finWasteful"), shooters.slice().sort(function (a, b) { return a.xgd - b.xgd; }).slice(0, 8));
+  }
+
+  /* ---- xG distribution: games by chance quality (mirrors XLALIGA / WC) ---- */
+  function renderXgDist() {
+    var host = $("#xgDist");
+    if (!host) return;
+    var recs = [];
+    M.forEach(function (m) {
+      if (!(m.bcn_xg > 0 || m.opp_xg > 0)) return;
+      recs.push({ xgf: m.bcn_xg, gf: m.bcn_goals });
+      recs.push({ xgf: m.opp_xg, gf: m.opp_goals });
+    });
+    if (!recs.length) { host.innerHTML = '<p class="hint">No xG data for this season yet.</p>'; return; }
+    var BW = 0.5, NB = 9;                      // eight half-goal buckets + a "4+" catch-all
+    var buckets = [];
+    for (var b = 0; b < NB; b++) buckets.push({ n: 0, xg: 0, g: 0 });
+    recs.forEach(function (r) {
+      var i = Math.min(Math.floor(r.xgf / BW), NB - 1);
+      buckets[i].n++; buckets[i].xg += r.xgf; buckets[i].g += r.gf;
+    });
+    var maxN = Math.max.apply(null, buckets.map(function (bk) { return bk.n; }).concat([1]));
+    var W = 560, H = 300, padL = 14, padB = 44, padT = 26;
+    var slot = (W - padL - 12) / NB, bw = slot - 8;
+    function by(n) { return H - padB - (n / maxN) * (H - padB - padT); }
+    var svg = ['<svg viewBox="0 0 ' + W + " " + H + '" width="100%" class="scatter-svg">'];
+    svg.push('<line x1="' + padL + '" y1="' + (H - padB) + '" x2="' + (W - 8) + '" y2="' + (H - padB) + '" stroke="#26304d" stroke-width="1.2"/>');
+    buckets.forEach(function (bk, i) {
+      var x = padL + i * slot + 4;
+      var lab = (i === NB - 1) ? (BW * (NB - 1)).toFixed(1) + "+" : (BW * i).toFixed(1) + "–" + (BW * (i + 1)).toFixed(1);
+      svg.push('<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (H - padB + 14) + '" fill="#8b95b5" font-size="9.5" text-anchor="middle">' + lab + "</text>");
+      if (!bk.n) return;
+      var ax = bk.xg / bk.n, ag = bk.g / bk.n, d = ag - ax;
+      var col = d > 0.15 ? "#43e8a0" : d < -0.15 ? "#ff5e7a" : "#4ea1ff";
+      var y = by(bk.n);
+      var info = lab + " xG · " + bk.n + " team-games · avg xG " + ax.toFixed(2) + " → avg goals " + ag.toFixed(2) +
+                 " (" + (d >= 0 ? "+" : "") + d.toFixed(2) + ")";
+      svg.push('<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) +
+        '" height="' + (H - padB - y).toFixed(1) + '" rx="4" fill="' + col + '" fill-opacity="0.55" stroke="' + col +
+        '" stroke-width="1" data-info="' + esc(info) + '"/>');
+      svg.push('<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (y - 6).toFixed(1) + '" fill="#e8edf7" font-size="11" font-weight="700" text-anchor="middle">' + bk.n + "</text>");
+      svg.push('<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (H - padB + 27) + '" fill="' + col + '" font-size="9.5" text-anchor="middle">' + ax.toFixed(1) + "→" + ag.toFixed(1) + "</text>");
+    });
+    svg.push('<text x="' + (W / 2) + '" y="' + (H - 3) + '" fill="#8b95b5" font-size="11" text-anchor="middle">xG created in the game · below each bar: avg xG → avg goals actually scored</text>');
+    svg.push("</svg>");
+    host.innerHTML = svg.join("");
+    if (!host._hooked) {
+      host._hooked = 1;
+      host.addEventListener("pointermove", function (ev) {
+        var t = ev.target, inf = t && t.getAttribute && t.getAttribute("data-info");
+        if (inf) showTip("<div class='t-line'>" + inf + "</div>", ev.clientX, ev.clientY); else hideTip();
+      });
+      host.addEventListener("pointerleave", hideTip);
+    }
   }
 
   /* ======================= PLAYER LAB ======================= */
