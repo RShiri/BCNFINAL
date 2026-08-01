@@ -101,6 +101,8 @@
     PGAMES = PEV._games || [];
 
     var bs = $("#brandSeason"); if (bs) bs.textContent = seasonLabel(sel);
+    var os = $("#overviewSeason");
+    if (os) os.textContent = sel === "all" ? "every season on record" : seasonLabel(sel);
     var ss = $("#seasonSel"); if (ss && ss.value !== sel) ss.value = sel;
     document.title = "FC Barcelona " + seasonLabel(sel) + " — Dashboard & xG Lab";
 

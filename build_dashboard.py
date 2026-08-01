@@ -26,9 +26,14 @@ LOGO_DST = os.path.join(HTML_DIR, "logos")
 
 sys.path.insert(0, ROOT)
 import build_website as bw   # reuse load_matches + shot model + colours
+import xlaliga_history as xlh  # seasons before 2025/26, from the XLALIGA dataset
 from xg_core.xa_score import XAScorer   # pass-level expected assists
 
 _XA = XAScorer()
+
+# An xlaliga_history.History when an XLALIGA clone was found, else None. Matches carrying
+# src == "xlaliga" are served from it; everything else comes from the raw WhoScored caches.
+HISTORY = None
 
 # design tokens (mirror styles.css)
 ACC, BLUE, WARN, BAD, MUTED, TEXT = "#3ddc97", "#4ea1ff", "#ffb454", "#ff6b81", "#93a0bd", "#e8edf7"
@@ -183,6 +188,24 @@ def aggregate_players(matches):
                 "rating_sum": 0.0, "rating_n": 0, "xg": 0.0, "xa": 0.0,
             }
         return e
+
+    # Seasons served from XLALIGA contribute their squad totals wholesale rather than
+    # match by match — their per-match files carry no defensive events, but the season
+    # aggregates do. build_data always passes either one whole season or every match, so
+    # a season present in `matches` is present in full.
+    if HISTORY:
+        for season in {m["season"] for m in matches if m.get("src") == "xlaliga"}:
+            for name, acc in HISTORY.season_player_accumulators(
+                season.replace("/", "-")
+            ).items():
+                e = rec(name, acc["pos"])
+                for k, v in acc.items():
+                    if k not in ("name", "pos"):
+                        e[k] += v
+        for m in matches:
+            if m.get("src") == "xlaliga":
+                for name, shots in HISTORY.player_shots(m).items():
+                    pshots.setdefault(name, []).extend(shots)
 
     for m in matches:
         f = files.get(m["mid"])
@@ -349,7 +372,18 @@ def aggregate_player_events(matches):
     def ri(v):
         return int(round(v or 0))
 
+    def game_index(m):
+        if m["mid"] not in game_idx:
+            game_idx[m["mid"]] = len(games)
+            # [opponent, date, season] — season lets the client filter events per season
+            games.append([m["opp_name"], m["date"], season_of(m["date"])])
+        return game_idx[m["mid"]]
+
     for m in matches:
+        if m.get("src") == "xlaliga":
+            if HISTORY:
+                HISTORY.player_events(m, rec, game_index(m))
+            continue
         f = files.get(m["mid"])
         if not f:
             continue
@@ -357,12 +391,7 @@ def aggregate_player_events(matches):
             d = json.load(open(f, encoding="utf-8"))
         except Exception:
             continue
-        mid = m["mid"]
-        if mid not in game_idx:
-            game_idx[mid] = len(games)
-            # [opponent, date, season] — season lets the client filter events per season
-            games.append([m["opp_name"], m["date"], season_of(m["date"])])
-        gi = game_idx[mid]
+        gi = game_index(m)
         side = "home" if m["bcn_is_home"] else "away"
         team = d.get(side, {})
         tid = team.get("teamId"); tname = team.get("name", "")
@@ -990,8 +1019,23 @@ def build_match_detail(m, d):
 # MAIN
 # ---------------------------------------------------------------------------
 def main():
+    global HISTORY
     print("=== BCNProject Single-Page Dashboard Builder ===\n")
     os.makedirs(HTML_DIR, exist_ok=True)
+
+    # Seasons before 2025/26 come from a clone of the XLALIGA dataset, when one is
+    # reachable. Without it the build still succeeds — it just covers 2025/26 alone.
+    xl_arg = None
+    if "--xlaliga" in sys.argv:
+        xl_arg = sys.argv[sys.argv.index("--xlaliga") + 1]
+    base = xlh.resolve(xl_arg or os.environ.get("XLALIGA_DIR")
+                       or os.path.join(ROOT, "..", "XLALIGA"))
+    if base:
+        HISTORY = xlh.History(base)
+        print(f"Earlier seasons: XLALIGA dataset at {base}")
+    else:
+        print("Earlier seasons: no XLALIGA clone found — building 2025/26 only.\n"
+              "  (git clone https://github.com/RShiri/XLALIGA ../XLALIGA)")
 
     print("Loading match data...")
     matches = bw.load_matches()
@@ -1028,6 +1072,20 @@ def main():
     # dropped into assets/data are picked up here automatically.
     for m in matches:
         m["season"] = season_of(m["date"])
+        m.setdefault("src", "whoscored")
+
+    # Fold in the earlier seasons. A raw cache always wins: if a fixture is in both
+    # sources, this repo's own scrape has the fuller event stream.
+    if HISTORY:
+        have = {(m["date"], m["home"], m["away"]) for m in matches}
+        seasons_here = {m["season"] for m in matches}
+        added = [h for h in HISTORY.matches()
+                 if h["season"] not in seasons_here
+                 and (h["date"], h["home"], h["away"]) not in have]
+        matches.extend(added)
+        matches.sort(key=lambda m: m["date"])
+        print(f"  {len(added)} matches from XLALIGA")
+
     print(f"  {len(matches)} Barcelona matches loaded")
     _scount = {}
     for m in matches:
@@ -1068,18 +1126,27 @@ def main():
              for f in glob.glob(os.path.join(DATA_DIR, "match_*_cache.json"))}
     written = 0
     for m in matches:
-        f = files.get(m["mid"])
-        if not f:
-            continue
-        try:
-            d = json.load(open(f, encoding="utf-8"))
-        except Exception:
-            continue
-        try:
-            detail = build_match_detail(m, d)
-        except Exception as e:
-            print(f"  WARN match {m['mid']}: {e}")
-            continue
+        if m.get("src") == "xlaliga":
+            detail = HISTORY.match_detail(m) if HISTORY else None
+            if detail is None:
+                continue
+            # build_match_detail does this for cache-backed matches; the clubs that only
+            # appear in the earlier seasons need their match-centre crests too.
+            mc_logo(m["home"])
+            mc_logo(m["away"])
+        else:
+            f = files.get(m["mid"])
+            if not f:
+                continue
+            try:
+                d = json.load(open(f, encoding="utf-8"))
+            except Exception:
+                continue
+            try:
+                detail = build_match_detail(m, d)
+            except Exception as e:
+                print(f"  WARN match {m['mid']}: {e}")
+                continue
         with open(os.path.join(detail_dir, f"{m['mid']}.js"), "w", encoding="utf-8") as fh:
             fh.write("window.MATCH_DETAIL = ")
             json.dump(detail, fh, ensure_ascii=True, separators=(",", ":"))
