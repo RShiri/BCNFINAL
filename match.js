@@ -27,9 +27,22 @@
   var s = document.createElement("script");
   s.src = "matches_detail/" + encodeURIComponent(id) + ".js?v=" + Date.now();
   s.onload = function () {
-    if (window.MATCH_DETAIL) boot(window.MATCH_DETAIL);
+    if (window.MATCH_DETAIL) { stampSeason(window.MATCH_DETAIL); boot(window.MATCH_DETAIL); }
     else fail("Match data loaded but was empty.");
   };
+
+  // The header carries the season this match belongs to — the dashboard now spans
+  // several of them, so it cannot be baked into match.html.
+  function stampSeason(d) {
+    var m = /^(\d{4})-(\d{2})/.exec(d.date || "");
+    if (!m) return;
+    var start = +m[1] - (+m[2] >= 7 ? 0 : 1);
+    var label = start + "/" + String((start + 1) % 100).padStart(2, "0");
+    var sub = document.querySelector("header.site .sub");
+    if (sub) sub.textContent = "Interactive shot & pass explorer · " + label;
+    document.title = "FC Barcelona · " + ((d.home || {}).name) + " vs " +
+                     ((d.away || {}).name) + " · " + label;
+  }
   s.onerror = function () { fail("No detailed data for this match (it may not have shot/pass events yet)."); };
   document.head.appendChild(s);
 
