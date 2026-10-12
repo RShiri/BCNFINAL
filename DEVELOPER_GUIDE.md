@@ -160,9 +160,12 @@ The site is served from the **`gh-pages`** branch (root), not GitHub Actions —
 `main` untouched and works with a PAT that lacks `workflow` scope.
 
 Redeploy after a rebuild:
-1. `py build_dashboard.py`
-2. Copy `assets/html/{index.html,app.js,data.js,styles.css,match.*}` + `matches_detail/`,
-   `logos/`, `mclogos/` (and a `.nojekyll`) to a clean folder.
+1. `py build_dashboard.py --xlaliga ../XLALIGA` (a clone of RShiri/XLALIGA supplies every
+   season except 2025/26; the build prints an "XLALIGA cross-check" line that must say 0
+   fixtures missing or different)
+2. Copy `assets/html/{index.html,app.js,data.js,player_events.js,styles.css,match.*,
+   portfolio-theme.css,portfolio-content.js}` + `matches_detail/`, `logos/`, `mclogos/`
+   (and a `.nojekyll`) to a clean folder.
 3. Commit that folder on `gh-pages` and push. Pages redeploys in ~1 min.
 
 `GIT_TOKEN` in `.env` is the push token. Pages source is `gh-pages` / (set via the REST API).

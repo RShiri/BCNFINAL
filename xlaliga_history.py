@@ -36,9 +36,10 @@ from __future__ import annotations
 import json
 import os
 
-# Seasons XLALIGA holds, oldest first. 2025/26 is deliberately absent: this repo's own
-# WhoScored caches cover it with the richer event stream, and they win.
-HISTORY_SEASONS = ["2022-23", "2023-24", "2024-25"]
+# Every season XLALIGA holds is offered, oldest first (read from its data.js, so a new
+# season such as 2026/27 appears as soon as XLALIGA publishes it). build_dashboard skips
+# any season this repo's own WhoScored caches already cover (2025/26): those carry the
+# richer event stream, and they win.
 
 TEAM = "Barcelona"
 BARCA_COL = "#e0224e"
@@ -68,7 +69,7 @@ def resolve(base):
 
 
 class History:
-    """Barcelona's pre-2025/26 seasons, in the shapes build_dashboard.py expects."""
+    """Barcelona's seasons from XLALIGA, in the shapes build_dashboard.py expects."""
 
     def __init__(self, base):
         self.base = base
@@ -78,10 +79,14 @@ class History:
 
     # ---------------------------------------------------------------- matches
 
+    def seasons(self):
+        """XLALIGA's season keys ('2022-23', ...), oldest first."""
+        return sorted(self._data.get("seasons", {}))
+
     def matches(self):
         """Barcelona fixtures in the shape build_website.load_matches() returns."""
         out = []
-        for season in HISTORY_SEASONS:
+        for season in self.seasons():
             block = self._data.get("seasons", {}).get(season)
             if not block:
                 continue
