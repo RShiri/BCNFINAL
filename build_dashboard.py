@@ -10,13 +10,19 @@ one club (FC Barcelona):
   assets/html/data.js      – GENERATED here: window.DATA = {...}
   assets/html/match_*.html – per-match detail pages (shot maps, pass networks …)
 
+The page shells (index.html, match.html) and the portfolio theme they load
+(portfolio-theme.css, portfolio-content.js + Ram Shiri's shared brand kit from
+https://rshiri.github.io/assets/brand/) are static files in assets/html; a rebuild
+only regenerates the data files, so the theme survives every rebuild.
+
 The detailed match pages keep every graph/stat; the SPA links into them from the
 "Shot Maps" tab and each match row, so nothing is removed.
 
-Run:  py build_dashboard.py
+Run:  py build_dashboard.py --xlaliga ../XLALIGA
+      (without lightgbm installed, to reproduce the deployed logistic-path xG)
 """
 
-import json, glob, os, re, sys, shutil, datetime
+import json, glob, os, re, sys, shutil, datetime, unicodedata
 
 ROOT     = os.path.dirname(os.path.abspath(__file__))
 HTML_DIR = os.path.join(ROOT, "assets", "html")
@@ -26,7 +32,7 @@ LOGO_DST = os.path.join(HTML_DIR, "logos")
 
 sys.path.insert(0, ROOT)
 import build_website as bw   # reuse load_matches + shot model + colours
-import xlaliga_history as xlh  # seasons before 2025/26, from the XLALIGA dataset
+import xlaliga_history as xlh  # every season not covered by raw caches, from XLALIGA
 from xg_core.xa_score import XAScorer   # pass-level expected assists
 
 _XA = XAScorer()
@@ -79,8 +85,16 @@ _LOGO_ALIAS = {
     "deportivo alaves": "alaves", "alaves": "alaves", "real oviedo": "oviedo",
     "rayo vallecano": "rayo vallecano", "celta vigo": "celta vigo",
     "real sociedad": "real sociedad", "real madrid": "real madrid",
+    # clubs promoted in 2026/27 (crests copied from XLALIGA's team_logos/laliga)
+    "racing santander": "racing santander", "deportivo a coruna": "deportivo a coruna",
+    "deportivo la coruna": "deportivo a coruna", "malaga": "malaga",
 }
 _logo_cache = {}
+
+
+def _fold(s):
+    """Lower-case and strip accents: 'Deportivo Alavés' -> 'deportivo alaves'."""
+    return unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode().lower().strip()
 
 
 def _slugify(s):
@@ -94,7 +108,7 @@ def team_logo(name):
         return ""
     if name in _logo_cache:
         return _logo_cache[name]
-    key = name.lower().strip()
+    key = _fold(name)
     cand = _LOGO_ALIAS.get(key, key)
     match = None
     for f in _LOGO_FILES:
@@ -506,10 +520,14 @@ def _season_by_comp(matches):
 
 
 def build_data(matches):
-    # Seasons present in the data, plus the upcoming one so the UI can offer 2026/27
-    # even before any fixture data exists for it.
+    # Seasons present in the data, plus the upcoming one so the UI can offer it even
+    # before any fixture data exists — but only once that season has actually begun
+    # (Jul->Jun calendar). While the latest season with data is the one in progress
+    # there is nothing upcoming to offer.
     data_seasons = sorted({m["season"] for m in matches if m.get("season")})
     upcoming = next_season(data_seasons[-1]) if data_seasons else ""
+    if upcoming and upcoming > season_of(datetime.date.today().isoformat()):
+        upcoming = ""
     season_keys = list(data_seasons)
     if upcoming and upcoming not in season_keys:
         season_keys.append(upcoming)
@@ -690,7 +708,11 @@ def build_match_svg(m, d, prev_mid, next_mid):
 """<!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>""" + bw_escape("%s %d-%d %s" % (hn, hs, aws, an)) + """ | FC Barcelona</title>
+<link rel="stylesheet" href="https://rshiri.github.io/assets/brand/brand.css">
+<script src="https://rshiri.github.io/assets/brand/brand.js"></script>
+<script src="portfolio-content.js"></script>
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="portfolio-theme.css">
 <style>
 .mhdr{max-width:1180px;margin:0 auto;padding:26px 20px 6px}
 .mscore{display:flex;align-items:center;justify-content:center;gap:26px;margin:6px 0}
@@ -1058,6 +1080,14 @@ def main():
     # be "Copa"; everything else keyed here wins over the auto-classifier.
     COMP_OVERRIDE = {
         # "1913936": "Copa",   # example: pin a specific match to a competition
+        # 2025/26, checked against XLALIGA's 38 La Liga fixtures: the auto-classifier
+        # had the Clasico as a UCL tie and the UCL round of 16 (Newcastle) and quarter-
+        # final (Atletico) legs as league games.
+        "1913998": "La Liga",  # Real Madrid 2-1 Barcelona, 2025-10-26
+        "1972181": "UCL",      # Newcastle 1-1 Barcelona, 2026-03-10
+        "1972185": "UCL",      # Barcelona 7-2 Newcastle, 2026-03-18
+        "1974943": "UCL",      # Barcelona 0-2 Atletico, 2026-04-08
+        "1974944": "UCL",      # Atletico 1-2 Barcelona, 2026-04-14
     }
     # Real Oviedo and Elche are La Liga clubs this season; the name-based Copa rule
     # wrongly tags their league games as cup ties. Treat them as La Liga unless
@@ -1091,6 +1121,21 @@ def main():
     for m in matches:
         _scount[m["season"]] = _scount.get(m["season"], 0) + 1
     print(f"  seasons: {_scount}")
+    if HISTORY:
+        # Cross-check: every played Barcelona fixture XLALIGA has must be here, with the
+        # same score (same home/away pair, kick-off within a week: sources can disagree
+        # on a rescheduled date).
+        def _d(s):
+            return datetime.date.fromisoformat(str(s)[:10])
+        lost = []
+        for h in HISTORY.matches():
+            if not any(m["home_score"] == h["home_score"] and m["away_score"] == h["away_score"]
+                       and abs((_d(m["date"]) - _d(h["date"])).days) <= 7
+                       and m["home"].split()[0] == h["home"].split()[0]
+                       and m["away"].split()[0] == h["away"].split()[0] for m in matches):
+                lost.append(f'{h["date"]} {h["home"]} {h["home_score"]}-{h["away_score"]} {h["away"]}')
+        print(f"  XLALIGA cross-check: {len(lost)} of its Barcelona fixtures missing or different"
+              + "".join("\n    " + x for x in lost))
 
     print("Aggregating season + players...")
     data = build_data(matches)

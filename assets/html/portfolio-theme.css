@@ -1,0 +1,313 @@
+/* Portfolio theme for the Barca xG Lab.
+   Loaded after styles.css (+ match.css) and after the shared brand kit
+   (https://rshiri.github.io/assets/brand/brand.css), it maps this dashboard's own
+   variables and components onto the portfolio's two looks:
+     html[data-site-style="c"]  HUD       navy, cyan hairlines, square, Chakra Petch caps
+     html[data-site-style="a"]  Matchday  near-black, lime, Barlow Condensed italic, skew + chamfer
+   Data colours keep their meaning in both looks: green = Barcelona / win / goal,
+   blue = opponent, amber = draw, red = loss / miss. Only the chrome changes.
+   Without brand.js (no data-site-style attribute) nothing here applies. */
+
+/* ------------------------------------------------------------------ tokens */
+html[data-site-style] {
+  --bg: var(--rs-bg);
+  --bg-2: var(--rs-bg-soft);
+  --card: var(--rs-panel);
+  --card-2: var(--rs-panel-2);
+  --line: var(--rs-line);
+  --text: var(--rs-ink);
+  --muted: var(--rs-muted);
+  --radius: 0px;
+  --shadow: none;
+  --ui: var(--rs-accent);          /* chrome accent (tabs, buttons, focus) */
+  --ui-ink: var(--rs-accent-ink);
+  --ui-soft: var(--rs-accent-soft);
+  --grid: rgba(255, 255, 255, .07); /* chart gridlines */
+}
+html[data-site-style="c"] { --grid: rgba(77, 240, 255, .10); --pitch-panel: #06101c; }
+html[data-site-style="a"] { --grid: rgba(255, 255, 255, .07); --pitch-panel: #101216; }
+
+html[data-site-style] body {
+  background: var(--rs-bg);
+  font-family: var(--rs-text);
+  color: var(--rs-body);
+}
+html[data-site-style="c"] body {
+  background:
+    linear-gradient(rgba(77, 240, 255, .035) 1px, transparent 1px) 0 0 / 100% 48px,
+    radial-gradient(1100px 520px at 85% -10%, rgba(77, 240, 255, .08), transparent 60%),
+    var(--rs-bg);
+}
+html[data-site-style] a { color: var(--ui); }
+html[data-site-style] b, html[data-site-style] strong { color: var(--rs-ink); }
+
+/* ------------------------------------------------------------------ type */
+html[data-site-style] .brand .title,
+html[data-site-style] .section-head h2,
+html[data-site-style] .card h3,
+html[data-site-style] .group-card h3,
+html[data-site-style] .explainer h3,
+html[data-site-style] .empty-state h3,
+html[data-site-style] .mv-title,
+html[data-site-style] .lineup-card h4,
+html[data-site-style] main h2,
+html[data-site-style] .stat .v,
+html[data-site-style] .sb-score,
+html[data-site-style] .sb-team .nm {
+  font-family: var(--rs-display);
+  color: var(--rs-ink);
+}
+html[data-site-style] .brand .title,
+html[data-site-style] .section-head h2,
+html[data-site-style] .card h3,
+html[data-site-style] .group-card h3,
+html[data-site-style] .explainer h3,
+html[data-site-style] .empty-state h3,
+html[data-site-style] .mv-title,
+html[data-site-style] main h2 { text-transform: uppercase; }
+
+html[data-site-style="c"] .brand .title { font-weight: 700; font-size: 19px; letter-spacing: .08em; }
+html[data-site-style="c"] .section-head h2,
+html[data-site-style="c"] main h2 { font-weight: 700; font-size: 22px; letter-spacing: .06em; }
+html[data-site-style="c"] .section-head h2::before { content: "// "; color: var(--ui); }
+html[data-site-style="c"] .card h3,
+html[data-site-style="c"] .explainer h3,
+html[data-site-style="c"] .mv-title { font-weight: 600; font-size: 15px; letter-spacing: .1em; }
+html[data-site-style="c"] .group-card h3 { font-weight: 600; font-size: 13px; letter-spacing: .14em; }
+
+html[data-site-style="a"] .brand .title { font-style: italic; font-weight: 800; font-size: 26px; letter-spacing: .01em; line-height: 1; }
+html[data-site-style="a"] .section-head h2,
+html[data-site-style="a"] main h2 { font-style: italic; font-weight: 800; font-size: 32px; line-height: 1; letter-spacing: .01em;
+  display: flex; align-items: center; gap: 12px; }
+html[data-site-style="a"] .section-head h2::before { content: ""; flex: none; width: 11px; height: .78em; background: var(--ui); transform: skewX(-18deg); }
+html[data-site-style="a"] .card h3,
+html[data-site-style="a"] .explainer h3,
+html[data-site-style="a"] .mv-title { font-style: italic; font-weight: 800; font-size: 21px; letter-spacing: .02em; }
+html[data-site-style="a"] .group-card h3 { font-style: italic; font-weight: 800; font-size: 17px; letter-spacing: .04em; }
+html[data-site-style="a"] .stat .v,
+html[data-site-style="a"] .sb-score { font-style: italic; font-weight: 800; }
+html[data-site-style="a"] .stat .v { font-size: 34px; line-height: 1; }
+html[data-site-style="c"] .stat .v { font-weight: 700; }
+
+html[data-site-style] .brand .title span { color: var(--ui); }
+html[data-site-style] .brand .sub,
+html[data-site-style] .section-head p,
+html[data-site-style] .hint,
+html[data-site-style] .card .hint { color: var(--rs-muted); }
+html[data-site-style] .section-head p { color: var(--rs-body); }
+html[data-site-style] .stat .k,
+html[data-site-style] thead th,
+html[data-site-style] .season-switch label,
+html[data-site-style] .form-label {
+  font-family: var(--rs-display);
+  letter-spacing: .12em;
+  color: var(--rs-muted);
+}
+html[data-site-style="a"] .stat .k,
+html[data-site-style="a"] thead th { letter-spacing: .06em; font-weight: 700; font-size: 13px; }
+
+/* ------------------------------------------------------------------ header + tabs */
+html[data-site-style] header.site {
+  background: color-mix(in srgb, var(--rs-bg) 88%, transparent);
+  border-bottom: 1px solid var(--rs-line);
+}
+html[data-site-style] nav.tabs button,
+html[data-site-style] .back-link {
+  border-radius: 0;
+  font-family: var(--rs-display);
+  text-transform: uppercase;
+  color: var(--rs-muted);
+}
+html[data-site-style="c"] nav.tabs { gap: 2px; }
+html[data-site-style="c"] nav.tabs button { font-weight: 600; font-size: 13px; letter-spacing: .12em; padding: 9px 14px;
+  border: 1px solid transparent; }
+html[data-site-style="c"] nav.tabs button:hover { color: var(--rs-ink); background: transparent; border-color: var(--rs-line); }
+html[data-site-style="c"] nav.tabs button.active { color: var(--ui); background: var(--ui-soft); border-color: var(--rs-line-strong);
+  box-shadow: inset 0 -2px 0 var(--ui); }
+
+html[data-site-style="a"] nav.tabs { gap: 4px; }
+html[data-site-style="a"] nav.tabs button { font-style: italic; font-weight: 800; font-size: 17px; letter-spacing: .03em; padding: 7px 14px;
+  transform: skewX(-12deg); }
+html[data-site-style="a"] nav.tabs button:hover { color: var(--rs-ink); background: var(--rs-panel-2); }
+html[data-site-style="a"] nav.tabs button.active { color: var(--ui-ink); background: var(--ui); box-shadow: none; }
+
+html[data-site-style] .back-link { background: transparent; border: 1px solid var(--rs-line-strong); letter-spacing: .1em; font-size: 13px; }
+html[data-site-style] .back-link:hover { color: var(--ui); border-color: var(--ui); }
+html[data-site-style="a"] .back-link { font-style: italic; font-weight: 800; font-size: 16px; letter-spacing: .03em; transform: skewX(-12deg); }
+
+/* ------------------------------------------------------------------ form controls */
+html[data-site-style] .season-switch select,
+html[data-site-style] .controls input,
+html[data-site-style] .controls select,
+html[data-site-style] .controls-bar select,
+html[data-site-style] .controls-bar input[type=text],
+html[data-site-style] .so-controls select,
+html[data-site-style] .so-controls input {
+  border-radius: 0;
+  background: var(--rs-panel);
+  border: 1px solid var(--rs-line-strong);
+  color: var(--rs-ink);
+  font-family: var(--rs-text);
+}
+html[data-site-style] .season-switch select { font-family: var(--rs-display); letter-spacing: .06em; }
+html[data-site-style] .season-switch select:hover,
+html[data-site-style] .controls input:focus,
+html[data-site-style] .controls select:focus { border-color: var(--ui); outline: none; }
+html[data-site-style] :focus-visible { outline: 2px solid var(--ui); outline-offset: 2px; }
+
+html[data-site-style] .seg { border-radius: 0; border-color: var(--rs-line-strong); background: transparent; }
+html[data-site-style] .seg-btn,
+html[data-site-style] .so-preset,
+html[data-site-style] .chip-toggle,
+html[data-site-style] .agm-tab,
+html[data-site-style] .play-btn,
+html[data-site-style] .png-btn,
+html[data-site-style] .agm-dl,
+html[data-site-style] .open-match {
+  border-radius: 0;
+  font-family: var(--rs-display);
+  text-transform: uppercase;
+}
+html[data-site-style="c"] .seg-btn,
+html[data-site-style="c"] .so-preset,
+html[data-site-style="c"] .chip-toggle,
+html[data-site-style="c"] .agm-tab,
+html[data-site-style="c"] .play-btn,
+html[data-site-style="c"] .png-btn,
+html[data-site-style="c"] .agm-dl,
+html[data-site-style="c"] .open-match { letter-spacing: .08em; font-weight: 600; font-size: 12px; }
+html[data-site-style="a"] .seg-btn,
+html[data-site-style="a"] .so-preset,
+html[data-site-style="a"] .chip-toggle,
+html[data-site-style="a"] .agm-tab,
+html[data-site-style="a"] .play-btn,
+html[data-site-style="a"] .png-btn,
+html[data-site-style="a"] .agm-dl,
+html[data-site-style="a"] .open-match { font-style: italic; font-weight: 800; font-size: 15px; letter-spacing: .03em; }
+html[data-site-style] .seg-btn.active,
+html[data-site-style] .so-preset.active,
+html[data-site-style] .agm-tab.active { background: var(--ui); color: var(--ui-ink); border-color: var(--ui); box-shadow: none; }
+html[data-site-style] .agm-tab.active .mm { color: var(--ui-ink); }
+html[data-site-style] .play-btn { background: var(--ui); color: var(--ui-ink); border-color: var(--ui); }
+html[data-site-style] .open-match:hover,
+html[data-site-style] .png-btn:hover,
+html[data-site-style] .agm-dl:hover { border-color: var(--ui); color: var(--ui); }
+
+/* ------------------------------------------------------------------ panels */
+html[data-site-style] .stat,
+html[data-site-style] .card,
+html[data-site-style] .group-card,
+html[data-site-style] .third-card,
+html[data-site-style] .explainer,
+html[data-site-style] .empty-state,
+html[data-site-style] .data-card,
+html[data-site-style] .db-match,
+html[data-site-style] .scoreboard,
+html[data-site-style] .pitch-wrap,
+html[data-site-style] .lineup-card,
+html[data-site-style] .tl-map-card,
+html[data-site-style] .stat-panel,
+html[data-site-style] .shot-detail,
+html[data-site-style] .insight,
+html[data-site-style] .tooltip {
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--rs-panel);
+  border-color: var(--rs-line);
+}
+html[data-site-style] .group-card h3 { background: var(--rs-panel-2); border-color: var(--rs-line); }
+html[data-site-style] .db-match-head:hover,
+html[data-site-style] .data-card:hover { background: var(--rs-panel-2); }
+html[data-site-style] .tooltip { background: var(--rs-bg); border-color: var(--rs-line-strong); }
+html[data-site-style] .timeline .goal-ev { border-radius: 0; background: var(--rs-bg-soft); }
+html[data-site-style] .explainer { border-inline-start: 2px solid var(--ui); }
+
+/* HUD: corner brackets on the big panels, a cyan tick on stat tiles */
+html[data-site-style="c"] .card,
+html[data-site-style="c"] .scoreboard,
+html[data-site-style="c"] .explainer,
+html[data-site-style="c"] .stat { position: relative; }
+html[data-site-style="c"] .card::before, html[data-site-style="c"] .card::after,
+html[data-site-style="c"] .scoreboard::before, html[data-site-style="c"] .scoreboard::after {
+  content: ""; position: absolute; width: 16px; height: 16px; border: 2px solid var(--ui); pointer-events: none;
+}
+html[data-site-style="c"] .card::before, html[data-site-style="c"] .scoreboard::before { left: -1px; top: -1px; border-right: 0; border-bottom: 0; }
+html[data-site-style="c"] .card::after, html[data-site-style="c"] .scoreboard::after { right: -1px; bottom: -1px; border-left: 0; border-top: 0; }
+html[data-site-style="c"] .stat::after { content: ""; position: absolute; right: -1px; top: -1px; width: 9px; height: 9px;
+  border-top: 2px solid var(--ui); border-right: 2px solid var(--ui); }
+
+/* Matchday: plates with a chamfered top-right corner, lime bar on stat tiles */
+html[data-site-style="a"] { --chamfer: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%); }
+html[data-site-style="a"] .card,
+html[data-site-style="a"] .scoreboard,
+html[data-site-style="a"] .group-card,
+html[data-site-style="a"] .stat,
+html[data-site-style="a"] .data-card { clip-path: var(--chamfer); border-color: transparent; }
+html[data-site-style="a"] .stat { position: relative; }
+html[data-site-style="a"] .stat::before { content: ""; position: absolute; left: 0; top: 0; width: 34px; height: 3px; background: var(--ui); }
+
+/* ------------------------------------------------------------------ tables */
+html[data-site-style] tbody td { border-bottom-color: var(--rs-line); }
+html[data-site-style] table.rank thead th:hover { color: var(--ui); }
+html[data-site-style] table.rank.players tbody tr:hover td { background: var(--ui-soft); }
+
+/* ------------------------------------------------------------------ recent form chips (were unstyled) */
+html[data-site-style] .form-wrap { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: -8px 0 6px; }
+html[data-site-style] .form-label { font-size: 12px; text-transform: uppercase; margin-inline-end: 8px; }
+html[data-site-style] .form-chip { display: inline-grid; place-items: center; width: 26px; height: 26px;
+  font: 700 13px/1 var(--rs-display); color: #0c0d10; }
+html[data-site-style] .form-chip.fc-W { background: var(--good, #3ddc97); }
+html[data-site-style] .form-chip.fc-D { background: var(--warn, #ffb454); }
+html[data-site-style] .form-chip.fc-L { background: var(--bad, #ff6b81); }
+html[data-site-style="a"] .form-chip { transform: skewX(-12deg); font-style: italic; font-weight: 800; }
+
+/* ------------------------------------------------------------------ chart chrome drawn as SVG by app.js / match.js
+   (gridlines, axes, label text and pitch panels use fixed hex values in the markup;
+   CSS beats SVG presentation attributes, so they follow the look without a re-render) */
+html[data-site-style] svg [stroke="#26304d"],
+html[data-site-style] svg [stroke="#2c3656"] { stroke: var(--rs-line-strong); }
+html[data-site-style] svg [stroke="#222b44"] { stroke: var(--grid); }
+html[data-site-style] svg circle[fill="#26304d"] { fill: var(--rs-line-strong); }
+html[data-site-style] svg text[fill="#8b95b5"],
+html[data-site-style] svg text[fill="#7c89a8"],
+html[data-site-style] svg text[fill="#93a0bd"] { fill: var(--rs-muted); }
+html[data-site-style] svg text[fill="#e8edf7"] { fill: var(--rs-ink); }
+html[data-site-style] svg [stroke="#0b0f1a"] { stroke: var(--rs-bg); }
+html[data-site-style] svg rect[fill="#101a2e"] { fill: var(--pitch-panel); }
+html[data-site-style] svg[style*="#101a2e"] { background: var(--pitch-panel) !important; border-radius: 0 !important; }
+html[data-site-style] svg text { font-family: var(--rs-text); }
+html[data-site-style] .pitch-svg { border-radius: 0; }
+
+/* ------------------------------------------------------------------ misc */
+html[data-site-style] .footer-note { color: var(--rs-muted); }
+html[data-site-style] code { border-radius: 0; background: var(--rs-panel-2); }
+html[data-site-style] .empty-state { border-style: dashed; border-color: var(--rs-line-strong); }
+
+/* Hebrew: swapped strings get dir="auto"; keep the condensed display caps readable */
+html[data-site-lang="he"] [dir="auto"] { letter-spacing: 0; text-transform: none; font-style: normal; }
+html[data-site-lang="he"] nav.tabs button[dir="auto"],
+html[data-site-lang="he"] nav.tabs button:has([dir="auto"]) { font-family: "IBM Plex Sans Hebrew", var(--rs-text); font-size: 14px; }
+
+/* Hebrew layout: keep each block's label, value and copy on the same side */
+html[data-site-lang="he"] .section-head p[dir] { margin-left: auto; }
+html[data-site-lang="he"] .stat { text-align: right; }
+html[data-site-lang="he"] .stat .v { direction: ltr; unicode-bidi: isolate; }
+html[data-site-lang="he"] .stat .cmp-vals { justify-content: flex-end; }
+html[data-site-lang="he"] .card h3[dir], html[data-site-lang="he"] .card .hint[dir] { text-align: right; }
+
+/* the player-leader tiles carry names, not numbers: never let them push the page wide */
+html[data-site-style] .stat { min-width: 0; }
+html[data-site-style] .stat .v { overflow-wrap: anywhere; }
+html[data-site-style] .seg { flex-wrap: wrap; }
+
+@media (max-width: 640px) {
+  html[data-site-style] .stats-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html[data-site-style] #playerLeaders .stat .v { font-size: 22px; }
+  html[data-site-style="a"] .brand .title { font-size: 22px; }
+  html[data-site-style="a"] .section-head h2, html[data-site-style="a"] main h2 { font-size: 26px; }
+  html[data-site-style] nav.tabs button { padding: 7px 10px; }
+  html[data-site-style="a"] nav.tabs button { font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-site-style] .view { animation: none; }
+}

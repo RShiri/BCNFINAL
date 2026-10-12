@@ -39,7 +39,9 @@
     var start = +m[1] - (+m[2] >= 7 ? 0 : 1);
     var label = start + "/" + String((start + 1) % 100).padStart(2, "0");
     var sub = document.querySelector("header.site .sub");
-    if (sub) sub.textContent = "Interactive shot & pass explorer · " + label;
+    var subSeason = document.getElementById("subSeason");
+    if (subSeason) subSeason.textContent = label;
+    else if (sub) sub.textContent = "Interactive shot & pass explorer · " + label;
     document.title = "FC Barcelona · " + ((d.home || {}).name) + " vs " +
                      ((d.away || {}).name) + " · " + label;
   }
